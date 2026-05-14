@@ -1,0 +1,8 @@
+[package]
+name = "carcossonne-uct"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = "0.10.1"
+strum = { version = "0.28", features = ["derive"] }
