@@ -1,20 +1,27 @@
-use std::{collections::{HashMap, HashSet}, fmt::{self, Display}, hash::DefaultHasher};
+use std::{collections::{HashMap, HashSet}, fmt::{self, Display}};
 
 use strum::{VariantArray};
+use thiserror::Error;
 
 use crate::engine::{multi_hashset::MultiHashSet, tile::{FixedTile, Place, Rotation, Tile, TileSet}};
 
 pub struct Game {
+    move_num: u32,
     map: HashMap<Place, FixedTile>,
     tiles_left: MultiHashSet<Tile>,
     places_available: HashSet<Place>,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum TileError {
+    #[error("Pozycja zajęta")]
     PlaceOccupied,
+    #[error("Sasiędzi nie pasują")]
     DoesntFit,
-    Disconnected
+    #[error("Kafelek odłączony")]
+    Disconnected,
+    #[error("Ruch dla starej mapy")]
+    StaleMove,
 }
 
 struct Neighbours<'a> {
@@ -54,13 +61,21 @@ impl Neighbours<'_> {
 
 #[derive(Debug)]
 pub struct Move {
+    move_num: u32,
     place: Place,
     tile: FixedTile,
+}
+
+impl Move {
+    pub fn get_move_num(&self) -> u32 {
+        self.move_num
+    }
 }
 
 impl Game {
     pub fn new(tileset: &dyn TileSet) -> Game {        
         let mut game = Game{
+            move_num: 0,
             map: HashMap::new(),
             tiles_left: tileset.tiles().iter().cloned().collect(),
             places_available: HashSet::new()
@@ -136,6 +151,7 @@ impl Game {
 
                     if let Ok(_) = self.check_tile(&fixed_tile, place) {
                         moves.push(Move { 
+                            move_num: self.move_num,
                             place: *place, 
                             tile: fixed_tile, 
                         });
@@ -193,19 +209,30 @@ impl Game {
     ) -> Result<(), TileError> {
         let fixed_tile = tile.fix_rotation(&rotation);
         self.check_tile(&fixed_tile, &place)?;
-        self.play_move(&Move { place: place, tile: fixed_tile });
+        self.play_move(&Move { 
+            move_num: self.move_num,
+            place: place, 
+            tile: fixed_tile 
+        })?;
 
         return Ok(());
     }
 
-    pub fn play_move(&mut self, mov: &Move) {
+    pub fn play_move(&mut self, mov: &Move) -> Result<(), TileError>{
         // println!("Tiles left: {:#?}", self.tiles_left);
         // println!("Places available: {:#?}", self.places_available);
+        if self.move_num != mov.move_num {
+            return Err(TileError::StaleMove)
+        }
+
+        self.move_num += 1;
 
         self.map.insert(mov.place, mov.tile);
         self.tiles_left.take(mov.tile.into());
         self.places_available.remove(&mov.place);
         self.places_available.extend(self.empty_neighbours(&mov.place));
+
+        Ok(())
     }
 }
 
