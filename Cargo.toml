@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+heapless = "0.9.3"
 rand = "0.10.1"
 strum = { version = "0.28", features = ["derive"] }
 thiserror = "2.0.18"

@@ -73,20 +73,20 @@ impl Move {
 }
 
 impl Game {
-    pub fn new(tileset: &dyn TileSet) -> Game {        
+    pub fn new(tileset: TileSet) -> Game {        
         let mut game = Game{
             move_num: 0,
             map: HashMap::new(),
-            tiles_left: tileset.tiles().iter().cloned().collect(),
+            tiles_left: tileset.tiles.iter().cloned().collect(),
             places_available: HashSet::new()
         };
 
         let starting_place = Place{x: 0, y: 0};
         game.map.insert(
             starting_place,
-            tileset.starting_tile(),
+            tileset.starting_tile.clone(),
         );
-        game.tiles_left.take(tileset.starting_tile().into());
+        game.tiles_left.take(&tileset.starting_tile.clone().into());
         game.places_available.extend([
             starting_place.north(),
             starting_place.east(),
@@ -209,7 +209,7 @@ impl Game {
     ) -> Result<(), TileError> {
         let fixed_tile = tile.fix_rotation(&rotation);
         self.check_tile(&fixed_tile, &place)?;
-        self.play_move(&Move { 
+        self.play_move(Move { 
             move_num: self.move_num,
             place: place, 
             tile: fixed_tile 
@@ -218,7 +218,7 @@ impl Game {
         return Ok(());
     }
 
-    pub fn play_move(&mut self, mov: &Move) -> Result<(), TileError>{
+    pub fn play_move(&mut self, mov: Move) -> Result<(), TileError>{
         // println!("Tiles left: {:#?}", self.tiles_left);
         // println!("Places available: {:#?}", self.places_available);
         if self.move_num != mov.move_num {
@@ -227,8 +227,8 @@ impl Game {
 
         self.move_num += 1;
 
+        self.tiles_left.take(&mov.tile.clone().into());
         self.map.insert(mov.place, mov.tile);
-        self.tiles_left.take(mov.tile.into());
         self.places_available.remove(&mov.place);
         self.places_available.extend(self.empty_neighbours(&mov.place));
 

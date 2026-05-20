@@ -1,9 +1,9 @@
 mod engine;
 
-use crate::engine::{game::Game, random_game::gen_random_game, standard_tileset::StandardTileSet};
+use crate::engine::{game::Game, random_game::gen_random_game, standard_tileset::{STANDARD_TILESET}};
 
 fn main() {
-    let tileset = StandardTileSet::new();
-    let mut game = Game::new(&tileset);
-    gen_random_game::<StandardTileSet>(&mut game);
+    let tileset = STANDARD_TILESET.clone();
+    let mut game = Game::new(tileset);
+    gen_random_game(&mut game);
 }

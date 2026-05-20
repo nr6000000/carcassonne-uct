@@ -1,4 +1,6 @@
-use crate::engine::tile::{Feature, FixedTile, Rotation, Tile, TileSet};
+use std::sync::LazyLock;
+
+use crate::engine::tile::{Feature, Rotation, Tile, TileSet};
 use crate::engine::tile_features::TileFeatures;
 
 macro_rules! feature {
@@ -36,153 +38,132 @@ macro_rules! tile {
     (@flag $t:ident, ROADS_DISCONNECTED) => { $t.roads_connected = false; };
 }
 
-pub struct StandardTileSet {
-    starting_tile: FixedTile,
-    tiles: Vec<Tile>,
-}
+static FFFF_CLOISTER: LazyLock<Tile> = LazyLock::new(|| tile!(F F F F CLOISTER));
+static CFFF: LazyLock<Tile> = LazyLock::new(|| tile!(C F F F));
+static CFCF_DISCONNECTED: LazyLock<Tile> = LazyLock::new(|| tile!(C F C F CITIES_DISCONNECTED));
+static CCFF_DISCONNECTED: LazyLock<Tile> = LazyLock::new(|| tile!(C C F F CITIES_DISCONNECTED));
+static FCFC: LazyLock<Tile> = LazyLock::new(|| tile!(F C F C));
+static FCFC_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(F C F C PENNANT));
+static CCFF: LazyLock<Tile> = LazyLock::new(|| tile!(C C F F));
+static CCFF_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C F F PENNANT));
+static CCFC: LazyLock<Tile> = LazyLock::new(|| tile!(C C F C));
+static CCFC_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C F C PENNANT));
+static CCCC_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C C C PENNANT));
 
-impl StandardTileSet {
-    #[allow(non_snake_case)]
-    pub fn new() -> Self {
-        // Kolejność jak w https://en.wikipedia.org/wiki/Carcassonne_(board_game)#Tiles
-        let FFFF_CLOISTER: Tile = tile!(F F F F CLOISTER);
-        let CFFF: Tile = tile!(C F F F);
-        let CFCF_DISCONNECTED: Tile = tile!(C F C F CITIES_DISCONNECTED);
-        let CCFF_DISCONNECTED: Tile = tile!(C C F F CITIES_DISCONNECTED);
-        let FCFC: Tile = tile!(F C F C);
-        let FCFC_PENNANT: Tile = tile!(F C F C PENNANT);
-        let CCFF: Tile = tile!(C C F F);
-        let CCFF_PENNANT: Tile = tile!(C C F F PENNANT);
-        let CCFC: Tile = tile!(C C F C);
-        let CCFC_PENNANT: Tile = tile!(C C F C PENNANT);
-        let CCCC_PENNANT: Tile = tile!(C C C C PENNANT);
+static FFRF_CLOISTER: LazyLock<Tile> = LazyLock::new(|| tile!(F F R F CLOISTER ROADS_DISCONNECTED));
+static CCRC: LazyLock<Tile> = LazyLock::new(|| tile!(C C R C));
+static CCRC_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C R C PENNANT));
 
-        let FFRF_CLOISTER: Tile = tile!(F F R F CLOISTER);
-        let CCRC: Tile = tile!(C C R C);
-        let CCRC_PENNANT: Tile = tile!(C C R C PENNANT);
+static FRFR: LazyLock<Tile> = LazyLock::new(|| tile!(F R F R));
+static FFRR: LazyLock<Tile> = LazyLock::new(|| tile!(F F R R));
+static CRFR: LazyLock<Tile> = LazyLock::new(|| tile!(C R F R));
+static CFRR: LazyLock<Tile> = LazyLock::new(|| tile!(C F R R));
+static CRRF: LazyLock<Tile> = LazyLock::new(|| tile!(C R R F));
+static CCRR: LazyLock<Tile> = LazyLock::new(|| tile!(C C R R));
+static CCRR_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C R R PENNANT));
 
-        let FRFR: Tile = tile!(F R F R);
-        let FFRR: Tile = tile!(F F R R);
-        let CRFR: Tile = tile!(C R F R);
-        let CFRR: Tile = tile!(C F R R);
-        let CRRF: Tile = tile!(C R R F);
-        let CCRR: Tile = tile!(C C R R);
-        let CCRR_PENNANT: Tile = tile!(C C R R PENNANT);
+static FRRR: LazyLock<Tile> = LazyLock::new(|| tile!(F R R R ROADS_DISCONNECTED));
+static CRRR: LazyLock<Tile> = LazyLock::new(|| tile!(C R R R ROADS_DISCONNECTED));
+static RRRR: LazyLock<Tile> = LazyLock::new(|| tile!(R R R R ROADS_DISCONNECTED));
 
-        let FRRR: Tile = tile!(F R R R ROADS_DISCONNECTED);
-        let CRRR: Tile = tile!(C R R R ROADS_DISCONNECTED);
-        let RRRR: Tile = tile!(R R R R ROADS_DISCONNECTED);
-
-        let starting_tile = CRFR.fix_rotation(&Rotation::Rot0);
-        let tiles = vec![
-            // 4x
-            FFFF_CLOISTER,
-            FFFF_CLOISTER,
-            FFFF_CLOISTER,
-            FFFF_CLOISTER,
-            // 5x
-            CFFF,
-            CFFF,
-            CFFF,
-            CFFF,
-            CFFF,
-            // 3x
-            CFCF_DISCONNECTED,
-            CFCF_DISCONNECTED,
-            CFCF_DISCONNECTED,
-            // 2x
-            CCFF_DISCONNECTED,
-            CCFF_DISCONNECTED,
-            // 1x
-            FCFC,
-            // 2x
-            FCFC_PENNANT,
-            FCFC_PENNANT,
-            // 3x
-            CCFF,
-            CCFF,
-            CCFF,
-            // 2x
-            CCFF_PENNANT,
-            CCFF_PENNANT,
-            // 3x
-            CCFC,
-            CCFC,
-            CCFC,
-            // 1x
-            CCFC_PENNANT,
-            // 1x
-            CCCC_PENNANT,
-            // 2x
-            FFRF_CLOISTER,
-            FFRF_CLOISTER,
-            // 1x
-            CCRC,
-            // 2x
-            CCRC_PENNANT,
-            CCRC_PENNANT,
-            // 8x
-            FRFR,
-            FRFR,
-            FRFR,
-            FRFR,
-            FRFR,
-            FRFR,
-            FRFR,
-            FRFR,
-            // 9x
-            FFRR,
-            FFRR,
-            FFRR,
-            FFRR,
-            FFRR,
-            FFRR,
-            FFRR,
-            FFRR,
-            FFRR,
-            // 4x
-            CRFR,
-            CRFR,
-            CRFR,
-            CRFR,
-            // 3x
-            CFRR,
-            CFRR,
-            CFRR,
-            // 3x
-            CRRF,
-            CRRF,
-            CRRF,
-            // 3x
-            CCRR,
-            CCRR,
-            CCRR,
-            // 2x
-            CCRR_PENNANT,
-            CCRR_PENNANT,
-            // 4x
-            FRRR,
-            FRRR,
-            FRRR,
-            FRRR,
-            // 3x
-            CRRR,
-            CRRR,
-            CRRR,
-            // 1x
-            RRRR,
-        ];
-
-        Self { starting_tile, tiles }
-    }
-}
-
-impl TileSet for StandardTileSet {
-    fn starting_tile(&self) -> FixedTile {
-        self.starting_tile
-    }
-
-    fn tiles(&self) -> &[Tile] {
-        self.tiles.as_slice()
-    }
-}
+pub static STANDARD_TILESET: LazyLock<TileSet> = LazyLock::new(|| TileSet::new(
+    CRFR.fix_rotation(&Rotation::Rot0),
+    vec![
+        // 4x
+        FFFF_CLOISTER.clone(),
+        FFFF_CLOISTER.clone(),
+        FFFF_CLOISTER.clone(),
+        FFFF_CLOISTER.clone(),
+        // 5x
+        CFFF.clone(),
+        CFFF.clone(),
+        CFFF.clone(),
+        CFFF.clone(),
+        CFFF.clone(),
+        // 3x
+        CFCF_DISCONNECTED.clone(),
+        CFCF_DISCONNECTED.clone(),
+        CFCF_DISCONNECTED.clone(),
+        // 2x
+        CCFF_DISCONNECTED.clone(),
+        CCFF_DISCONNECTED.clone(),
+        // 1x
+        FCFC.clone(),
+        // 2x
+        FCFC_PENNANT.clone(),
+        FCFC_PENNANT.clone(),
+        // 3x
+        CCFF.clone(),
+        CCFF.clone(),
+        CCFF.clone(),
+        // 2x
+        CCFF_PENNANT.clone(),
+        CCFF_PENNANT.clone(),
+        // 3x
+        CCFC.clone(),
+        CCFC.clone(),
+        CCFC.clone(),
+        // 1x
+        CCFC_PENNANT.clone(),
+        // 1x
+        CCCC_PENNANT.clone(),
+        // 2x
+        FFRF_CLOISTER.clone(),
+        FFRF_CLOISTER.clone(),
+        // 1x
+        CCRC.clone(),
+        // 2x
+        CCRC_PENNANT.clone(),
+        CCRC_PENNANT.clone(),
+        // 8x
+        FRFR.clone(),
+        FRFR.clone(),
+        FRFR.clone(),
+        FRFR.clone(),
+        FRFR.clone(),
+        FRFR.clone(),
+        FRFR.clone(),
+        FRFR.clone(),
+        // 9x
+        FFRR.clone(),
+        FFRR.clone(),
+        FFRR.clone(),
+        FFRR.clone(),
+        FFRR.clone(),
+        FFRR.clone(),
+        FFRR.clone(),
+        FFRR.clone(),
+        FFRR.clone(),
+        // 4x
+        CRFR.clone(),
+        CRFR.clone(),
+        CRFR.clone(),
+        CRFR.clone(),
+        // 3x
+        CFRR.clone(),
+        CFRR.clone(),
+        CFRR.clone(),
+        // 3x
+        CRRF.clone(),
+        CRRF.clone(),
+        CRRF.clone(),
+        // 3x
+        CCRR.clone(),
+        CCRR.clone(),
+        CCRR.clone(),
+        // 2x
+        CCRR_PENNANT.clone(),
+        CCRR_PENNANT.clone(),
+        // 4x
+        FRRR.clone(),
+        FRRR.clone(),
+        FRRR.clone(),
+        FRRR.clone(),
+        // 3x
+        CRRR.clone(),
+        CRRR.clone(),
+        CRRR.clone(),
+        // 1x
+        RRRR.clone(),
+    ],
+));
