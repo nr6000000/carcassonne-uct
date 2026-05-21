@@ -3,7 +3,7 @@ use std::{collections::{HashMap, HashSet}, fmt::{self, Display}};
 use strum::{VariantArray};
 use thiserror::Error;
 
-use crate::engine::{multi_hashset::MultiHashSet, tile::{FixedTile, Place, Rotation, Tile, TileSet}};
+use crate::engine::{datastructures::multi_hashset::MultiHashSet, fixed_tile::FixedTile, tile::{Rotation, Tile}, tile_set::TileSet};
 
 pub struct Game {
     move_num: u32,
@@ -22,6 +22,46 @@ pub enum TileError {
     Disconnected,
     #[error("Ruch dla starej mapy")]
     StaleMove,
+}
+
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+pub struct Place {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Place {
+    pub fn north(&self) -> Place {
+        Place{x: self.x, y: self.y - 1}
+    }
+
+    pub fn northeast(&self) -> Place {
+        Place{x: self.x + 1, y: self.y - 1}
+    }
+
+    pub fn east(&self) -> Place {
+        Place{x: self.x + 1, y: self.y}
+    }
+   
+    pub fn southeast(&self) -> Place {
+        Place{x: self.x + 1, y: self.y + 1}
+    }
+
+    pub fn south(&self) -> Place {
+        Place{x: self.x, y: self.y + 1}
+    }
+    
+    pub fn southwest(&self) -> Place {
+        Place{x: self.x - 1, y: self.y + 1}
+    }
+
+    pub fn west(&self) -> Place {
+        Place{x: self.x - 1, y: self.y}
+    }
+    
+    pub fn northwest(&self) -> Place {
+        Place{x: self.x - 1, y: self.y - 1}
+    }
 }
 
 struct Neighbours<'a> {
@@ -123,19 +163,19 @@ impl Game {
         let neighbours = self.neighbours(place);
         let mut empty: Vec<Place> = Vec::new();
 
-        if let None = neighbours.north {
+        if neighbours.north.is_none() {
             empty.push(place.north());
         }
 
-        if let None = neighbours.east {
+        if neighbours.east.is_none() {
             empty.push(place.east());
         }
 
-        if let None = neighbours.south {
+        if neighbours.south.is_none() {
             empty.push(place.south());
         }
 
-        if let None = neighbours.west {
+        if neighbours.west.is_none() {
             empty.push(place.west());
         }
 
@@ -149,7 +189,7 @@ impl Game {
                 for rotation in Rotation::VARIANTS {
                     let fixed_tile = tile.fix_rotation(rotation);
 
-                    if let Ok(_) = self.check_tile(&fixed_tile, place) {
+                    if self.check_tile(&fixed_tile, place).is_ok() {
                         moves.push(Move { 
                             move_num: self.move_num,
                             place: *place, 
@@ -164,11 +204,11 @@ impl Game {
     }
 
     fn check_tile(&self, tile: &FixedTile, place: &Place) -> Result<(), TileError> {
-        if self.map.get(&place).is_some() {
+        if self.map.contains_key(place) {
             return Err(TileError::PlaceOccupied);
         }
 
-        let neighbours = self.neighbours(&place);
+        let neighbours = self.neighbours(place);
         if neighbours.number() == 0
         {
             return Err(TileError::Disconnected);
@@ -211,11 +251,11 @@ impl Game {
         self.check_tile(&fixed_tile, &place)?;
         self.play_move(Move { 
             move_num: self.move_num,
-            place: place, 
+            place, 
             tile: fixed_tile 
         })?;
 
-        return Ok(());
+        Ok(())
     }
 
     pub fn play_move(&mut self, mov: Move) -> Result<(), TileError>{

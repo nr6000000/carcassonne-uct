@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 use strum::EnumCount;
 
-use crate::engine::rel_direction::RelDirection;
+use crate::engine::datastructures::rel_direction::RelDirection;
 use crate::engine::tile::Feature;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -53,7 +53,7 @@ impl TileFeatures {
 
         let canonical_order= orders
             .iter()
-            .min_by_key(|order| order_value(order))
+            .min_by_key(order_value)
             .unwrap();
 
         Self { features: *canonical_order }
@@ -68,11 +68,11 @@ impl TileFeatures {
     }
 
     pub fn get_feature(&self, dir: &RelDirection) -> &Feature {
-        match dir {
-            &RelDirection::Up => &self.features[0],
-            &RelDirection::Right => &self.features[1],
-            &RelDirection::Down => &self.features[2],
-            &RelDirection::Left => &self.features[3],
+        match *dir {
+            RelDirection::Up => &self.features[0],
+            RelDirection::Right => &self.features[1],
+            RelDirection::Down => &self.features[2],
+            RelDirection::Left => &self.features[3],
             _ => panic!("Unexpected RelDirection"),
         }
     }

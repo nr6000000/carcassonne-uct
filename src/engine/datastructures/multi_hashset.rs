@@ -42,8 +42,8 @@ impl<T: Eq + Hash + Copy> MultiHashSet<T> {
 
     pub fn take(&mut self, el: &T) {
         self.elements.entry(*el).and_modify(|x| *x = x.saturating_sub(1));
-        if let Some(0) = self.elements.get(&el) {
-            self.elements.remove(&el);
+        if let Some(0) = self.elements.get(el) {
+            self.elements.remove(el);
         }
     }
 
