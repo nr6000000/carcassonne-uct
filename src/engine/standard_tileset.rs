@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use crate::engine::tile::{Feature, Rotation, Tile};
+use crate::engine::tile::{Feature, Tile};
 use crate::engine::datastructures::tile_features::TileFeatures;
 use crate::engine::tile_set::TileSet;
 
@@ -70,7 +70,7 @@ static CRRR: LazyLock<Tile> = LazyLock::new(|| tile!(C R R R ROADS_DISCONNECTED)
 static RRRR: LazyLock<Tile> = LazyLock::new(|| tile!(R R R R ROADS_DISCONNECTED));
 
 pub static STANDARD_TILESET: LazyLock<TileSet> = LazyLock::new(|| TileSet::new(
-    CRFR.fix_rotation(&Rotation::Rot0),
+    *CRFR,
     vec![
         // 4x
         *FFFF_CLOISTER,

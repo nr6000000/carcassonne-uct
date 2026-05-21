@@ -3,13 +3,14 @@ use std::{collections::{HashMap, HashSet}, fmt::{self, Display}};
 use strum::{VariantArray};
 use thiserror::Error;
 
-use crate::engine::{datastructures::multi_hashset::MultiHashSet, fixed_tile::FixedTile, tile::{Rotation, Tile}, tile_set::TileSet};
+use crate::engine::{datastructures::multi_hashset::MultiHashSet, fixed_tile::FixedTile, structure_links::{RelStructureLinks, StructureLinks}, tile::{Rotation, Tile}, tile_set::TileSet};
 
 pub struct Game {
     move_num: u32,
     map: HashMap<Place, FixedTile>,
     tiles_left: MultiHashSet<Tile>,
     places_available: HashSet<Place>,
+    structures: HashMap<Tile, RelStructureLinks>,
 }
 
 #[derive(Error, Debug)]
@@ -118,7 +119,8 @@ impl Game {
             move_num: 0,
             map: HashMap::new(),
             tiles_left: tileset.tiles.iter().cloned().collect(),
-            places_available: HashSet::new()
+            places_available: HashSet::new(),
+            structures: tileset.structures,
         };
 
         let starting_place = Place{x: 0, y: 0};
@@ -187,7 +189,7 @@ impl Game {
         for tile in self.tiles_left.elements() {
             for place in self.places_available.iter() {
                 for rotation in Rotation::VARIANTS {
-                    let fixed_tile = tile.fix_rotation(rotation);
+                    let fixed_tile = tile.fix_rotation(rotation, &self.structures);
 
                     if self.check_tile(&fixed_tile, place).is_ok() {
                         moves.push(Move { 
@@ -247,7 +249,7 @@ impl Game {
         rotation: Rotation,
         place: Place
     ) -> Result<(), TileError> {
-        let fixed_tile = tile.fix_rotation(&rotation);
+        let fixed_tile = tile.fix_rotation(&rotation, &self.structures);
         self.check_tile(&fixed_tile, &place)?;
         self.play_move(Move { 
             move_num: self.move_num,

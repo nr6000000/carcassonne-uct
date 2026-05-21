@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::{Debug, Display, Error, Formatter};
 use std::hash::Hash;
 
@@ -5,6 +6,7 @@ use strum::{EnumCount, VariantArray};
 
 use crate::engine::datastructures::tile_features::TileFeatures;
 use crate::engine::fixed_tile::FixedTile;
+use crate::engine::structure_links::RelStructureLinks;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Tile {
@@ -55,6 +57,7 @@ impl Debug for Tile {
     }
 }
 
+#[repr(u8)]
 #[derive(VariantArray, Copy, Clone, Debug)]
 pub enum Rotation {
     Rot0 = 0,
@@ -64,7 +67,11 @@ pub enum Rotation {
 }
 
 impl Tile {
-    pub fn fix_rotation(&self, rotation: &Rotation) -> FixedTile {
+    pub fn fix_rotation(
+        &self, 
+        rotation: &Rotation,
+        structures: &HashMap<Tile, RelStructureLinks>,
+    ) -> FixedTile {
         let unrotated = self.features.get();
         let rot = *rotation as usize;
         let rotated = [
@@ -79,6 +86,7 @@ impl Tile {
             east: rotated[1],
             south: rotated[2],
             west: rotated[3],
+            structure_links: structures[self].to_abs(rotation),
             cloister: self.cloister,
             pennant: self.pennant,
             cities_connected: self.cities_connected,

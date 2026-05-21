@@ -1,16 +1,36 @@
+use crate::engine::{datastructures::direction::Direction, tile::Rotation};
+
+#[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum RelDirection {
-    Up,
-    UpRight,
-    Right,
-    DownRight,
-    Down,
-    DownLeft,
-    Left,
-    UpLeft,
+    Up = 0,
+    UpRight = 1,
+    Right = 2,
+    DownRight = 3,
+    Down = 4,
+    DownLeft = 5,
+    Left = 6,
+    UpLeft = 7,
 }
 
 impl RelDirection {
+    fn from_index(i: u8) -> Self {
+        match i % 8 {
+            0 => Self::Up,
+            1 => Self::UpRight,
+            2 => Self::Right,
+            3 => Self::DownRight,
+            4 => Self::Down,
+            5 => Self::DownLeft,
+            6 => Self::Left,
+            _ => Self::UpLeft,
+        }
+    }
+
+    fn index(self) -> u8 {
+        self as u8
+    }
+
     pub fn edges() -> [RelDirection; 4] {
         [
             RelDirection::Up,
@@ -66,5 +86,10 @@ impl RelDirection {
             RelDirection::Left => RelDirection::Up,
             RelDirection::UpLeft => RelDirection::UpRight,
         }
+    }
+
+    pub fn to_abs(&self, rot: &Rotation) -> Direction {
+        let rot_amount = *rot as u8;
+        Direction::from_index(self.index() + rot_amount)
     }
 }

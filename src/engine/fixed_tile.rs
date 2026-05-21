@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use crate::engine::{datastructures::tile_features::TileFeatures, tile::{Feature, Tile}};
+use crate::engine::{datastructures::tile_features::TileFeatures, structure_links::StructureLinks, tile::{Feature, Tile}};
 
 #[derive(Clone, Debug)]
 pub struct FixedTile {
@@ -8,6 +8,7 @@ pub struct FixedTile {
     pub east: Feature,
     pub south: Feature,
     pub west: Feature,
+    pub structure_links: StructureLinks,
     pub cloister: bool,
     pub pennant: bool,
     pub cities_connected: bool,

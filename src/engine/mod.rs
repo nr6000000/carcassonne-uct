@@ -5,3 +5,4 @@ pub mod standard_tileset;
 pub mod tile_set;
 mod fixed_tile;
 mod datastructures;
+mod structure_links;
