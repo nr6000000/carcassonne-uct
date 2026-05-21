@@ -149,7 +149,12 @@ impl StructureLinks {
                     .copied()
                     .collect();
 
-                if features.get_feature(&dir.cw_neighbour_edge()) == &Feature::Road {
+                if features.get_feature(&dir.cw_neighbour_edge()) == &Feature::Road ||
+                    (
+                        features.get_feature(&dir.cw_neighbour_edge()) == &Feature::City &&
+                        tile.city_road
+                    )
+                {
                     new_slot = true;
                 }
             }
@@ -230,7 +235,7 @@ mod tests {
 use super::*;
     
     #[test]
-    fn structures_gen() {
+    fn structures_gen_crfr() {
         // CRFR
         let tile = Tile { 
             features: TileFeatures::new(
@@ -243,6 +248,7 @@ use super::*;
             pennant: false, 
             cities_connected: true, 
             roads_connected: true, 
+            city_road: false,
         };
 
         let structure_links = StructureLinks::new(&tile);
@@ -342,6 +348,7 @@ use super::*;
             pennant: false, 
             cities_connected: true, 
             roads_connected: false, 
+            city_road: false,
         };
 
         let structure_links = StructureLinks::new(&tile);
@@ -355,6 +362,84 @@ use super::*;
         assert_eq!(
             structure_links.get_cloister().unwrap().structure_type,
             StructureType::Cloister,
+        );
+    }
+
+    #[test]
+    fn structures_gen_cccr() {
+        // CCCR
+        let tile = Tile { 
+            features: TileFeatures::new(
+                Feature::City,
+                Feature::City,
+                Feature::City,
+                Feature::Road,
+            ), 
+            cloister: false, 
+            pennant: true, 
+            cities_connected: true, 
+            roads_connected: false, 
+            city_road: true,
+        };
+
+        let structure_links = StructureLinks::new(&tile);
+        assert_eq!(structure_links.structures.len(), 4);
+        assert_eq!(
+            structure_links.get_structures()
+                .filter(|s| s.structure_type == StructureType::Feature(Feature::City))
+                .count(), 
+            1
+        );
+        assert_eq!(
+            structure_links.get_structures()
+                .filter(|s| s.structure_type == StructureType::Feature(Feature::Road))
+                .count(), 
+            1
+        );
+        assert_eq!(
+            structure_links.get_structures()
+                .filter(|s| s.structure_type == StructureType::Feature(Feature::Field))
+                .count(), 
+            2
+        );
+    }
+
+        #[test]
+    fn structures_gen_ccrr() {
+        // CCCR
+        let tile = Tile { 
+            features: TileFeatures::new(
+                Feature::City,
+                Feature::City,
+                Feature::Road,
+                Feature::Road,
+            ), 
+            cloister: false, 
+            pennant: false, 
+            cities_connected: true, 
+            roads_connected: true, 
+            city_road: false,
+        };
+
+        let structure_links = StructureLinks::new(&tile);
+        assert_eq!(structure_links.structures.len(), 4);
+        assert_eq!(
+            structure_links.get_structures()
+                .filter(|s| s.structure_type == StructureType::Feature(Feature::City))
+                .count(), 
+            1
+        );
+        assert_eq!(
+            structure_links.get_structures()
+                .filter(|s| s.structure_type == StructureType::Feature(Feature::Road))
+                .count(), 
+            1
+        );
+        assert_eq!(
+            structure_links.get_structures()
+                .filter(|s| s.structure_type == StructureType::Feature(Feature::Field))
+                .count(), 
+            2
         );
     }
 }

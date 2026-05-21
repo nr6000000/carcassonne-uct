@@ -25,6 +25,7 @@ macro_rules! tile {
                 pennant: false,
                 cities_connected: true,
                 roads_connected: true,
+                city_road: false,
             };
             // Silent mut warning
             t.cloister = false;
@@ -37,6 +38,7 @@ macro_rules! tile {
     (@flag $t:ident, PENNANT) => { $t.pennant = true; };
     (@flag $t:ident, CITIES_DISCONNECTED) => { $t.cities_connected = false; };
     (@flag $t:ident, ROADS_DISCONNECTED) => { $t.roads_connected = false; };
+    (@flag $t:ident, CITY_ROAD) => { $t.city_road = true; };
 }
 
 static FFFF_CLOISTER: LazyLock<Tile> = LazyLock::new(|| tile!(F F F F CLOISTER));
@@ -52,8 +54,8 @@ static CCFC_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C F C PENNANT));
 static CCCC_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C C C PENNANT));
 
 static FFRF_CLOISTER: LazyLock<Tile> = LazyLock::new(|| tile!(F F R F CLOISTER ROADS_DISCONNECTED));
-static CCRC: LazyLock<Tile> = LazyLock::new(|| tile!(C C R C));
-static CCRC_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C R C PENNANT));
+static CCRC: LazyLock<Tile> = LazyLock::new(|| tile!(C C R C ROADS_DISCONNECTED CITY_ROAD));
+static CCRC_PENNANT: LazyLock<Tile> = LazyLock::new(|| tile!(C C R C PENNANT ROADS_DISCONNECTED CITY_ROAD));
 
 static FRFR: LazyLock<Tile> = LazyLock::new(|| tile!(F R F R));
 static FFRR: LazyLock<Tile> = LazyLock::new(|| tile!(F F R R));

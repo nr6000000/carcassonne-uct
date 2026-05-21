@@ -12,6 +12,7 @@ pub struct FixedTile {
     pub pennant: bool,
     pub cities_connected: bool,
     pub roads_connected: bool,
+    pub city_road: bool,
 }
 
 impl From<FixedTile> for Tile {
@@ -27,6 +28,7 @@ impl From<FixedTile> for Tile {
             pennant: value.pennant,
             cities_connected: value.cities_connected,
             roads_connected: value.roads_connected,
+            city_road: value.city_road,
         }
     }
 }

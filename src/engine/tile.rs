@@ -13,6 +13,7 @@ pub struct Tile {
     pub pennant: bool,
     pub cities_connected: bool,
     pub roads_connected: bool,
+    pub city_road: bool,
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord, EnumCount, Debug)]
@@ -82,6 +83,7 @@ impl Tile {
             pennant: self.pennant,
             cities_connected: self.cities_connected,
             roads_connected: self.roads_connected,
+            city_road: self.city_road,
         }
     }
 }
