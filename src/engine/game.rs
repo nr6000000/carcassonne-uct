@@ -1,9 +1,10 @@
 use std::{collections::{HashMap, HashSet}, fmt::{self, Display}};
 
-use strum::{VariantArray};
+use heapless::{index_map::FnvIndexMap, Vec as ArrayVec};
+use strum::{IntoEnumIterator, VariantArray};
 use thiserror::Error;
 
-use crate::engine::{datastructures::multi_hashset::MultiHashSet, fixed_tile::FixedTile, structure_links::{RelStructureLinks, StructureLinks}, tile::{Rotation, Tile}, tile_set::TileSet};
+use crate::engine::{datastructures::{direction::Direction, multi_hashset::MultiHashSet}, fixed_tile::FixedTile, structure_links::{RelStructureLinks, StructureLinks}, tile::{Rotation, Tile}, tile_set::TileSet};
 
 pub struct Game {
     move_num: u32,
@@ -32,71 +33,17 @@ pub struct Place {
 }
 
 impl Place {
-    pub fn north(&self) -> Place {
-        Place{x: self.x, y: self.y - 1}
-    }
-
-    pub fn northeast(&self) -> Place {
-        Place{x: self.x + 1, y: self.y - 1}
-    }
-
-    pub fn east(&self) -> Place {
-        Place{x: self.x + 1, y: self.y}
-    }
-   
-    pub fn southeast(&self) -> Place {
-        Place{x: self.x + 1, y: self.y + 1}
-    }
-
-    pub fn south(&self) -> Place {
-        Place{x: self.x, y: self.y + 1}
-    }
-    
-    pub fn southwest(&self) -> Place {
-        Place{x: self.x - 1, y: self.y + 1}
-    }
-
-    pub fn west(&self) -> Place {
-        Place{x: self.x - 1, y: self.y}
-    }
-    
-    pub fn northwest(&self) -> Place {
-        Place{x: self.x - 1, y: self.y - 1}
-    }
-}
-
-struct Neighbours<'a> {
-    north: Option<&'a FixedTile>,
-    northeast: Option<&'a FixedTile>,
-    east: Option<&'a FixedTile>,
-    southeast: Option<&'a FixedTile>,
-    south: Option<&'a FixedTile>,
-    southwest: Option<&'a FixedTile>,
-    west: Option<&'a FixedTile>,
-    northwest: Option<&'a FixedTile>,
-}
-
-impl Neighbours<'_> {
-    fn number(&self) -> i32 {
-        (
-            if self.north.is_some() { 1 } else { 0 } +
-            if self.east.is_some() { 1 } else { 0 } +
-            if self.south.is_some() { 1 } else { 0 } +
-            if self.west.is_some() { 1 } else { 0 }
-        )
-    }
-
-    fn number_diag(&self) -> i32 {
-        (
-            if self.north.is_some() { 1 } else { 0 } +
-            if self.northeast.is_some() { 1 } else { 0 } +
-            if self.east.is_some() { 1 } else { 0 } +
-            if self.southeast.is_some() { 1 } else { 0 } +
-            if self.south.is_some() { 1 } else { 0 } +
-            if self.southwest.is_some() { 1 } else { 0 } +
-            if self.west.is_some() { 1 } else { 0 } +
-            if self.northwest.is_some() { 1 } else { 0 }
-        )
+    pub fn neighbour(&self, dir: &Direction) -> Place {
+        match dir {
+            Direction::North => Place { x: self.x, y: self.y - 1 },
+            Direction::NorthEast => Place { x: self.x + 1, y: self.y - 1 },
+            Direction::East => Place { x: self.x + 1, y: self.y },
+            Direction::SouthEast => Place { x: self.x + 1, y: self.y + 1 },
+            Direction::South => Place { x: self.x, y: self.y + 1 },
+            Direction::SouthWest => Place { x: self.x - 1, y: self.y + 1 },
+            Direction::West => Place { x: self.x - 1, y: self.y },
+            Direction::NorthWest => Place { x: self.x - 1, y: self.y - 1 },
+        }
     }
 }
 
@@ -130,58 +77,29 @@ impl Game {
         );
         game.tiles_left.take(&tileset.starting_tile.clone().into());
         game.places_available.extend([
-            starting_place.north(),
-            starting_place.east(),
-            starting_place.south(),
-            starting_place.west(),
+            starting_place.neighbour(&Direction::North),
+            starting_place.neighbour(&Direction::East),
+            starting_place.neighbour(&Direction::South),
+            starting_place.neighbour(&Direction::West),
         ]);
         
         game
     }
 
-    fn neighbours(&self, place: &Place) -> Neighbours<'_> {
-        let north = self.map.get(&place.north());
-        let northeast = self.map.get(&place.northeast());
-        let east = self.map.get(&place.east());
-        let southeast = self.map.get(&place.southeast());
-        let south = self.map.get(&place.south());
-        let southwest = self.map.get(&place.southwest());
-        let west = self.map.get(&place.west());
-        let northwest = self.map.get(&place.northwest());
-        
-        Neighbours {
-            north,
-            northeast,
-            east,
-            southeast,
-            south,
-            southwest,
-            west,
-            northwest,
-        }
+    fn neighbour_edges(&self, place: &Place) -> FnvIndexMap<Direction, &FixedTile, 8> {
+        Direction::edges().into_iter()
+            .filter_map(|dir| {
+                self.map.get(&place.neighbour(&dir))
+                    .map(|tile| (dir, tile))
+            })
+            .collect()
     }
 
-    fn empty_neighbours(&self, place: &Place) -> Vec<Place> {
-        let neighbours = self.neighbours(place);
-        let mut empty: Vec<Place> = Vec::new();
-
-        if neighbours.north.is_none() {
-            empty.push(place.north());
-        }
-
-        if neighbours.east.is_none() {
-            empty.push(place.east());
-        }
-
-        if neighbours.south.is_none() {
-            empty.push(place.south());
-        }
-
-        if neighbours.west.is_none() {
-            empty.push(place.west());
-        }
-
-        empty
+    fn neighbour_edges_empty(&self, place: &Place) -> ArrayVec<Place, 8> {
+        Direction::iter()
+            .map(|dir| place.neighbour(&dir))
+            .filter(|place| self.map.get(&place).is_none())
+            .collect()
     }
 
     pub fn get_moves(&self) -> Vec<Move> {
@@ -210,32 +128,14 @@ impl Game {
             return Err(TileError::PlaceOccupied);
         }
 
-        let neighbours = self.neighbours(place);
-        if neighbours.number() == 0
+        let neighbours = self.neighbour_edges(place);
+        if neighbours.iter().count() == 0
         {
             return Err(TileError::Disconnected);
         }
 
-        if let Some(neighbour) = neighbours.north {
-            if neighbour.south != tile.north {
-                return Err(TileError::DoesntFit);
-            }
-        }
-
-        if let Some(neighbour) = neighbours.east {
-            if neighbour.west != tile.east {
-                return Err(TileError::DoesntFit);
-            }
-        }
-
-        if let Some(neighbour) = neighbours.south {
-            if neighbour.north != tile.south {
-                return Err(TileError::DoesntFit);
-            }
-        }
-
-        if let Some(neighbour) = neighbours.west {
-            if neighbour.east != tile.west {
+        for (dir, neighbour) in neighbours.into_iter() {
+            if tile.edges[&dir] != neighbour.edges[&dir.opposite()] {
                 return Err(TileError::DoesntFit);
             }
         }
@@ -272,7 +172,7 @@ impl Game {
         self.tiles_left.take(&mov.tile.clone().into());
         self.map.insert(mov.place, mov.tile);
         self.places_available.remove(&mov.place);
-        self.places_available.extend(self.empty_neighbours(&mov.place));
+        self.places_available.extend(self.neighbour_edges_empty(&mov.place));
 
         Ok(())
     }

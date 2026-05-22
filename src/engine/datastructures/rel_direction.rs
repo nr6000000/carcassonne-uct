@@ -14,7 +14,7 @@ pub enum RelDirection {
 }
 
 impl RelDirection {
-    fn from_index(i: u8) -> Self {
+    pub fn from_index(i: u8) -> Self {
         match i % 8 {
             0 => Self::Up,
             1 => Self::UpRight,
@@ -27,7 +27,7 @@ impl RelDirection {
         }
     }
 
-    fn index(self) -> u8 {
+    pub fn index(self) -> u8 {
         self as u8
     }
 
@@ -90,6 +90,6 @@ impl RelDirection {
 
     pub fn to_abs(&self, rot: &Rotation) -> Direction {
         let rot_amount = *rot as u8;
-        Direction::from_index(self.index() + rot_amount)
+        Direction::from_index(self.index() + rot_amount*2)
     }
 }

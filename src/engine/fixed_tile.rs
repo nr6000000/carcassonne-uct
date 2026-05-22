@@ -1,13 +1,12 @@
 use std::fmt::{Display, Formatter};
 
-use crate::engine::{datastructures::tile_features::TileFeatures, structure_links::StructureLinks, tile::{Feature, Tile}};
+use heapless::index_map::FnvIndexMap;
+
+use crate::engine::{datastructures::{direction::Direction, tile_features::TileFeatures}, structure_links::StructureLinks, tile::{Feature, Tile}};
 
 #[derive(Clone, Debug)]
 pub struct FixedTile {
-    pub north: Feature,
-    pub east: Feature,
-    pub south: Feature,
-    pub west: Feature,
+    pub edges: FnvIndexMap<Direction, Feature, 4>,
     pub structure_links: StructureLinks,
     pub cloister: bool,
     pub pennant: bool,
@@ -19,12 +18,7 @@ pub struct FixedTile {
 impl From<FixedTile> for Tile {
     fn from(value: FixedTile) -> Self {
         Tile {
-            features: TileFeatures::new(
-                value.north, 
-                value.east, 
-                value.south, 
-                value.west,
-            ), 
+            features: TileFeatures::from_iter(value.edges.values().copied()),
             cloister: value.cloister,
             pennant: value.pennant,
             cities_connected: value.cities_connected,
@@ -48,9 +42,16 @@ impl Display for FixedTile {
             ' '
         };
 
-        writeln!(f, "╔ {} ╗", self.north)?;
-        writeln!(f, "{}{}{}{}", self.west, center, disconnected, self.east)?;
-        writeln!(f, "╚ {} ╝", self.south)?;
+        writeln!(f, "╔ {} ╗", self.edges[&Direction::North])?;
+        writeln!(
+            f, 
+            "{}{}{}{}", 
+            self.edges[&Direction::West], 
+            center, 
+            disconnected, 
+            self.edges[&Direction::East]
+        )?;
+        writeln!(f, "╚ {} ╝", self.edges[&Direction::South])?;
 
         Ok(())
     }

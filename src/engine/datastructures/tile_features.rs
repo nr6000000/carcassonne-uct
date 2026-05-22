@@ -1,10 +1,12 @@
 use std::hash::Hash;
 use std::fmt::Debug;
 
+use heapless::index_map::FnvIndexMap;
 use strum::EnumCount;
 
+use crate::engine::datastructures::direction::Direction;
 use crate::engine::datastructures::rel_direction::RelDirection;
-use crate::engine::tile::Feature;
+use crate::engine::tile::{Feature, Rotation};
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct TileFeatures {
@@ -75,5 +77,28 @@ impl TileFeatures {
             RelDirection::Left => &self.features[3],
             _ => panic!("Unexpected RelDirection"),
         }
+    }
+
+    pub fn fix_rotation(&self, rot: &Rotation) -> FnvIndexMap<Direction, Feature, 4>{
+        self.features.iter().enumerate()
+            .map(|(i, f)| {
+                (
+                    RelDirection::from_index((i*2) as u8).to_abs(&rot), 
+                    *f
+                )
+            })
+            .collect()
+    }
+}
+
+impl FromIterator<Feature> for TileFeatures {
+    fn from_iter<T: IntoIterator<Item = Feature>>(iter: T) -> Self {
+        let mut into_iter = iter.into_iter();
+        Self::new(
+            into_iter.next().unwrap(),
+            into_iter.next().unwrap(),
+            into_iter.next().unwrap(),
+            into_iter.next().unwrap(),
+        )
     }
 }

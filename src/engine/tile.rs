@@ -72,20 +72,8 @@ impl Tile {
         rotation: &Rotation,
         structures: &HashMap<Tile, RelStructureLinks>,
     ) -> FixedTile {
-        let unrotated = self.features.get();
-        let rot = *rotation as usize;
-        let rotated = [
-            unrotated[rot % 4],
-            unrotated[(rot+1) % 4],
-            unrotated[(rot+2) % 4],
-            unrotated[(rot+3) % 4],
-        ];
-
         FixedTile { 
-            north: rotated[0],
-            east: rotated[1],
-            south: rotated[2],
-            west: rotated[3],
+            edges: self.features.fix_rotation(rotation),
             structure_links: structures[self].to_abs(rotation),
             cloister: self.cloister,
             pennant: self.pennant,
