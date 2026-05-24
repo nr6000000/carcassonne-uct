@@ -4,7 +4,7 @@ use std::fmt::{Debug};
 use std::hash::Hash;
 use core::convert::From;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MultiHashSet<T: Eq + Hash> {
     elements: HashMap<T, u32>
 }
@@ -25,6 +25,16 @@ impl<T: Eq + Hash + Copy> FromIterator<T> for MultiHashSet<T> {
     }
 }
 
+impl<K: Eq + Hash + Copy> FromIterator<(K, u32)> for MultiHashSet<K> {
+    fn from_iter<I: IntoIterator<Item = (K, u32)>>(iter: I) -> Self {
+        let mut set = MultiHashSet::new();
+        for (k, v) in iter.into_iter() {
+            set.set(k, v);
+        }
+        set
+    }
+}
+
 impl<T: Eq + Hash + Copy, const N: usize> From<[T;N]> for MultiHashSet<T> {
     fn from(arr: [T;N]) -> Self {
         Self::from_iter(arr)
@@ -34,6 +44,10 @@ impl<T: Eq + Hash + Copy, const N: usize> From<[T;N]> for MultiHashSet<T> {
 impl<T: Eq + Hash + Copy> MultiHashSet<T> {
     pub fn new() -> MultiHashSet<T> {
         MultiHashSet { elements: HashMap::new() }
+    }
+
+    pub fn set(&mut self, k: T, v: u32) {
+        self.elements.insert(k, v);
     }
 
     pub fn put(&mut self, el: T) {

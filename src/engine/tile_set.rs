@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::engine::{fixed_tile::FixedTile, structure_links::RelStructureLinks, tile::{Rotation, Tile}};
+use crate::engine::{fixed_tile::FixedTile, structures::RelStructureLinks, tile::{Rotation, Tile}};
 
 #[derive(Clone)]
 pub struct TileSet {

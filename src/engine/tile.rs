@@ -6,7 +6,7 @@ use strum::{EnumCount, VariantArray};
 
 use crate::engine::datastructures::tile_features::TileFeatures;
 use crate::engine::fixed_tile::FixedTile;
-use crate::engine::structure_links::RelStructureLinks;
+use crate::engine::structures::RelStructureLinks;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Tile {

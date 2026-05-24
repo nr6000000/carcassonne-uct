@@ -1,17 +1,31 @@
 use std::{collections::{HashMap, HashSet}, fmt::{self, Display}};
 
-use heapless::{index_map::FnvIndexMap, Vec as ArrayVec};
+use heapless::{Vec as ArrayVec, index_map::FnvIndexMap, index_set::FnvIndexSet};
 use strum::{IntoEnumIterator, VariantArray};
 use thiserror::Error;
 
-use crate::engine::{datastructures::{direction::Direction, multi_hashset::MultiHashSet}, fixed_tile::FixedTile, structure_links::{RelStructureLinks, StructureLinks}, tile::{Rotation, Tile}, tile_set::TileSet};
+use crate::engine::{datastructures::{direction::Direction, multi_hashset::MultiHashSet}, fixed_tile::FixedTile, structures::{self, RelStructureLinks, StructureLinks, StructureType, TileStructure}, tile::{Feature, Rotation, Tile}, tile_set::TileSet};
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct Player(u32);
+
+#[derive(Debug, Clone)]
+pub struct Structure {
+    id: usize,
+    followers: MultiHashSet<Player>,
+    complete: bool,
+    structure_type: StructureType,
+}
 
 pub struct Game {
     move_num: u32,
     map: HashMap<Place, FixedTile>,
     tiles_left: MultiHashSet<Tile>,
     places_available: HashSet<Place>,
-    structures: HashMap<Tile, RelStructureLinks>,
+    tileset: TileSet,
+    followers_left: MultiHashSet<Player>,
+    structures: HashMap<usize, Structure>,
+    structure_map: HashMap<Place, FnvIndexSet<usize, 16>>,
 }
 
 #[derive(Error, Debug)]
@@ -52,6 +66,7 @@ pub struct Move {
     move_num: u32,
     place: Place,
     tile: FixedTile,
+    follower: Option<usize>,
 }
 
 impl Move {
@@ -61,27 +76,49 @@ impl Move {
 }
 
 impl Game {
-    pub fn new(tileset: TileSet) -> Game {        
+    pub fn new(tileset: TileSet, number_players: u32) -> Game {        
         let mut game = Game{
             move_num: 0,
             map: HashMap::new(),
             tiles_left: tileset.tiles.iter().cloned().collect(),
             places_available: HashSet::new(),
-            structures: tileset.structures,
+            tileset,
+            followers_left: MultiHashSet::from_iter(
+                (0..number_players).map(|id| (Player(id), 8))
+            ),
+            structures: HashMap::new(),
+            structure_map: HashMap::new(),
         };
 
         let starting_place = Place{x: 0, y: 0};
+        let starting_tile = game.tileset.starting_tile.clone();
         game.map.insert(
             starting_place,
-            tileset.starting_tile.clone(),
+            starting_tile.clone(),
         );
-        game.tiles_left.take(&tileset.starting_tile.clone().into());
+        game.tiles_left.take(&starting_tile.clone().into());
         game.places_available.extend([
             starting_place.neighbour(&Direction::North),
             starting_place.neighbour(&Direction::East),
             starting_place.neighbour(&Direction::South),
             starting_place.neighbour(&Direction::West),
         ]);
+
+        let mut ids_set: FnvIndexSet<usize, 16> = FnvIndexSet::new();
+        starting_tile.structure_links
+            .get_structures()
+            .for_each(|s| {
+                let structure_type = *s.get_structure_type();
+                let id = game.add_structure(Structure {
+                    id: 0,
+                    followers: HashSet::new(),
+                    complete: false,
+                    structure_type: structure_type,
+                });
+
+                let _ = ids_set.insert(id);
+            });
+        game.structure_map.insert(starting_place, ids_set);
         
         game
     }
@@ -107,7 +144,7 @@ impl Game {
         for tile in self.tiles_left.elements() {
             for place in self.places_available.iter() {
                 for rotation in Rotation::VARIANTS {
-                    let fixed_tile = tile.fix_rotation(rotation, &self.structures);
+                    let fixed_tile = tile.fix_rotation(rotation, &self.tileset.structures);
 
                     if self.check_tile(&fixed_tile, place).is_ok() {
                         moves.push(Move { 
@@ -149,7 +186,7 @@ impl Game {
         rotation: Rotation,
         place: Place
     ) -> Result<(), TileError> {
-        let fixed_tile = tile.fix_rotation(&rotation, &self.structures);
+        let fixed_tile = tile.fix_rotation(&rotation, &self.tileset.structures);
         self.check_tile(&fixed_tile, &place)?;
         self.play_move(Move { 
             move_num: self.move_num,
@@ -171,10 +208,44 @@ impl Game {
 
         self.tiles_left.take(&mov.tile.clone().into());
         self.map.insert(mov.place, mov.tile);
+
         self.places_available.remove(&mov.place);
         self.places_available.extend(self.neighbour_edges_empty(&mov.place));
 
+        for structure in mov.tile.structure_links.get_structures() {
+            self.add_structure(Structure { 
+                id: 0, 
+                followers: move., 
+                complete: (), 
+                structure_type: *structure.get_structure_type(),
+            });
+        }
+
         Ok(())
+    }
+
+    pub fn add_structure(
+        &mut self, 
+        place: &Place,
+        structure_links: &StructureLinks,
+        tile: &FixedTile, 
+        follower: bool,
+    ) -> usize {
+        for structure in tile.structure_links.get_structures() {
+            let connected_structures =  structure_links
+                .connects_to(structure)
+                .filter_map(|dir|  self.map.get(&place.neighbour(dir)))
+                .map(|neighbour| neighbour.structure_links.get_structure(dir));
+        }
+
+        let new_id = self.structures.len();
+        self.structures.insert(new_id, Structure { 
+            id: new_id, 
+            followers: (), 
+            complete: (), 
+            structure_type 
+        });
+        new_id
     }
 }
 

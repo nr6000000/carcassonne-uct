@@ -9,14 +9,20 @@ pub enum StructureType {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct Structure {
+pub struct TileStructure {
     id: usize,
     structure_type: StructureType,
 }
 
+impl TileStructure {
+    pub fn get_structure_type(&self) -> &StructureType {
+        &self.structure_type
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct RelStructureLinks {
-    structures: FnvIndexMap<usize, Structure, 16>,
+    structures: FnvIndexMap<usize, TileStructure, 16>,
     internal_connections: FnvIndexMap<RelDirection, usize, 8>,
     external_connections: FnvIndexMap<usize, FnvIndexSet<RelDirection, 4>, 8>,
     cloister: Option<usize>,
@@ -24,7 +30,7 @@ pub struct RelStructureLinks {
 
 impl RelStructureLinks {
     pub fn new(tile: &Tile) -> Self {
-        let mut structures: FnvIndexMap<usize, Structure, 16> = FnvIndexMap::new();
+        let mut structures: FnvIndexMap<usize, TileStructure, 16> = FnvIndexMap::new();
         let mut internal_connections: FnvIndexMap<RelDirection, usize, 8> = FnvIndexMap::new();
         let mut external_connections: FnvIndexMap<usize, FnvIndexSet<RelDirection, 4>, 8> = FnvIndexMap::new();
         let mut cloister_ref: Option<usize> = None;
@@ -47,7 +53,7 @@ impl RelStructureLinks {
                             current_id = id_gen.next().unwrap();
                             structures.insert(
                                 current_id,
-                                Structure {
+                                TileStructure {
                                     id: current_id,
                                     structure_type: StructureType::Feature(feature)
                                 }
@@ -69,7 +75,7 @@ impl RelStructureLinks {
                         let current_id = id_gen.next().unwrap();
                         structures.insert(
                             current_id,
-                            Structure {
+                            TileStructure {
                                 id: current_id,
                                 structure_type: StructureType::Feature(feature)
                             }
@@ -132,7 +138,7 @@ impl RelStructureLinks {
                     current_id = id_gen.next().unwrap();
                     structures.insert(
                     current_id,
-                    Structure { 
+                    TileStructure { 
                             id: current_id, 
                             structure_type: StructureType::Feature(Feature::Field) 
                         }
@@ -163,7 +169,7 @@ impl RelStructureLinks {
             let id = id_gen.next().unwrap();
             structures.insert(
                 id,
-                Structure { 
+                TileStructure { 
                     id, 
                     structure_type: StructureType::Cloister,
                 }
@@ -179,23 +185,22 @@ impl RelStructureLinks {
         }
     }
 
-    pub fn get_structures(&self) -> impl Iterator<Item = &Structure> {
+    pub fn get_structures(&self) -> impl Iterator<Item = &TileStructure> {
         self.structures.values()
     }
 
-    pub fn get_structure(&self, dir: &RelDirection) -> &Structure {
+    pub fn get_structure(&self, dir: &RelDirection) -> &TileStructure {
         let structure_id = self.internal_connections[dir];
         &self.structures[&structure_id]
     }
 
-    pub fn get_cloister(&self) -> Option<&Structure> {
+    pub fn get_cloister(&self) -> Option<&TileStructure> {
         self.cloister.map(|c| &self.structures[&c])
     }
 
-    pub fn connects_to(&self, structure: &Structure) -> impl Iterator<Item = &RelDirection> {
+    pub fn connects_to(&self, structure: &TileStructure) -> impl Iterator<Item = &RelDirection> {
         self.external_connections[&structure.id].iter()
     }
-
 }
 
 #[cfg(test)]
@@ -418,10 +423,29 @@ mod tests {
 
 #[derive(Debug, Clone)]
 pub struct StructureLinks {
-    structures: FnvIndexMap<usize, Structure, 16>,
+    structures: FnvIndexMap<usize, TileStructure, 16>,
     internal_connections: FnvIndexMap<Direction, usize, 8>,
     external_connections: FnvIndexMap<usize, FnvIndexSet<Direction, 4>, 8>,
     cloister: Option<usize>,
+}
+
+impl StructureLinks {
+    pub fn get_structures(&self) -> impl Iterator<Item = &TileStructure> {
+        self.structures.values()
+    }
+
+    pub fn get_structure(&self, dir: &Direction) -> &TileStructure {
+        let structure_id = self.internal_connections[dir];
+        &self.structures[&structure_id]
+    }
+
+    pub fn get_cloister(&self) -> Option<&TileStructure> {
+        self.cloister.map(|c| &self.structures[&c])
+    }
+
+    pub fn connects_to(&self, structure: &TileStructure) -> impl Iterator<Item = &Direction> {
+        self.external_connections[&structure.id].iter()
+    }
 }
 
 impl RelStructureLinks {

@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use heapless::index_map::FnvIndexMap;
 
-use crate::engine::{datastructures::{direction::Direction, tile_features::TileFeatures}, structure_links::StructureLinks, tile::{Feature, Tile}};
+use crate::engine::{datastructures::{direction::Direction, tile_features::TileFeatures}, structures::StructureLinks, tile::{Feature, Tile}};
 
 #[derive(Clone, Debug)]
 pub struct FixedTile {
