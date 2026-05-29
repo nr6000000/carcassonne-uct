@@ -16,10 +16,10 @@ pub fn gen_random_game(game: &mut Game) {
 
             println!("Move {}", chosen_move.get_move_num());
             println!("Playing move: {:#?}", chosen_move);
-            println!("{}", game);
-            println!();
             game.play_move(chosen_move)
                 .unwrap_or_else(|err| panic!("Bład gry: {}", err));
+            println!("{}", game);
+            println!();
         }
     }   
 }

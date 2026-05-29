@@ -1,8 +1,26 @@
 use strum::EnumIter;
 
-#[repr(u8)]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumIter)]
 pub enum Direction {
+    North = 0,
+    East = 2,
+    South = 4,
+    West = 6,
+}
+
+impl Direction {
+    pub fn opposite(&self) -> Self {
+        match self {
+            Self::North => Self::South,
+            Self::East => Self::West,
+            Self::South => Self::North,
+            Self::West => Self::East,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumIter)]
+pub enum OrdinalDirection {
     North = 0,
     NorthEast = 1,
     East = 2,
@@ -13,43 +31,8 @@ pub enum Direction {
     NorthWest = 7,
 }
 
-impl Direction {
-    pub fn from_index(i: u8) -> Self {
-        match i % 8 {
-            0 => Self::North,
-            1 => Self::NorthEast,
-            2 => Self::East,
-            3 => Self::SouthEast,
-            4 => Self::South,
-            5 => Self::SouthWest,
-            6 => Self::West,
-            _ => Self::NorthWest,
-        }
-    }
-
-    pub fn index(self) -> u8 {
-        self as u8
-    }
-
-    pub fn edges() -> [Direction; 4] {
-        [
-            Self::North,
-            Self::East,
-            Self::South,
-            Self::West,
-        ]
-    }
-
-    pub fn corners() -> [Direction; 4] {
-        [
-            Self::NorthEast,
-            Self::SouthEast,
-            Self::SouthWest,
-            Self::NorthWest,
-        ]
-    }
-
-    pub fn opposite(&self) -> Direction {
+impl OrdinalDirection {
+    pub fn opposite(&self) -> Self {
         match self {
             Self::North => Self::South,
             Self::NorthEast => Self::SouthWest,
@@ -59,6 +42,28 @@ impl Direction {
             Self::SouthWest => Self::NorthEast,
             Self::West => Self::East,
             Self::NorthWest => Self::SouthEast,
+        }
+    }
+}
+
+impl From<Direction> for OrdinalDirection {
+    fn from(dir: Direction) -> Self {
+        match dir {
+            Direction::North => OrdinalDirection::North,
+            Direction::East => OrdinalDirection::East,
+            Direction::South => OrdinalDirection::South,
+            Direction::West => OrdinalDirection::West,
+        }
+    }
+}
+
+impl From<&Direction> for &OrdinalDirection {
+    fn from(dir: &Direction) -> Self {
+        match dir {
+            Direction::North => &OrdinalDirection::North,
+            Direction::East => &OrdinalDirection::East,
+            Direction::South => &OrdinalDirection::South,
+            Direction::West => &OrdinalDirection::West,
         }
     }
 }
