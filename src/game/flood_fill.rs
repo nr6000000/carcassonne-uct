@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::engine::datastructures::index::Index;
+use crate::game::datastructures::index::Index;
 
 /// Tak naprawdę to nie:
 /// Span-based scanline flood fill.

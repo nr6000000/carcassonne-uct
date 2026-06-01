@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}, fmt::{Display, Error}, iter, ops::{In
 use std::fmt::Write;
 
 use itertools::Itertools;
-use crate::engine::{datastructures::index::Index, game::PlayerId};
+use crate::game::{datastructures::index::Index, game::PlayerId};
 
 const GROWTH_FACTOR: usize = 2;
 
@@ -107,7 +107,7 @@ impl<T: Default + Eq + Display> Map<T> {
             write!(buf, "{}", if row == 0 {"00"} else {"  "})?;
             for column in min_x-1..max_x+2 {
                 write!(buf, "{}", self[(row, column)])?;
-                
+
                 if let Some(followers) = followers && 
                     followers.contains_key(&&Index{x: column, y: row}) 
                 {
@@ -191,7 +191,7 @@ impl<T: Display + Default + Eq> Display for Map<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::engine::TilePixel;
+    use crate::game::TilePixel;
 
     use super::*;
 

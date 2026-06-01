@@ -1,24 +1,21 @@
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::PI;
 use std::fmt::Display;
-use std::iter;
 
 use heapless::{Vec as ArrayVec};
-use itertools::{Itertools, structs};
+use itertools::{Itertools};
 use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
-use tileset_format::TilePixel::Nothing;
 use tileset_format::{TILE_SIZE, TileSet};
 
-use crate::engine::TilePixel;
-use crate::engine::datastructures::direction::{Direction, OrdinalDirection};
-use crate::engine::datastructures::index::Index;
-use crate::engine::datastructures::map::{Map};
-use crate::engine::datastructures::multi_hashset::MultiHashSet;
-use crate::engine::flood_fill::flood_fill;
-use crate::engine::tile::{NOTHING_TILE, Tile, TileId};
-use crate::engine::tilepixel_ext::TilePixelExt;
+use crate::game::TilePixel;
+use crate::game::datastructures::direction::{Direction, OrdinalDirection};
+use crate::game::datastructures::index::Index;
+use crate::game::datastructures::map::{Map};
+use crate::game::datastructures::multi_hashset::MultiHashSet;
+use crate::game::flood_fill::flood_fill;
+use crate::game::tile::{NOTHING_TILE, Tile, TileId};
+use crate::game::tilepixel_ext::TilePixelExt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct PlayerId(u32);
@@ -510,7 +507,7 @@ impl Display for Game {
 
 #[cfg(test)]
 mod tests {
-    use crate::engine::standard_tileset::STANDARD_TILESET;
+    use crate::game::standard_tileset::STANDARD_TILESET;
 
     use super::*;
 

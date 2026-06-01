@@ -2,7 +2,7 @@ use std::ops::Index as Index;
 
 use tileset_format::TILE_SIZE;
 
-use crate::engine::{TilePixel, game::Rotation};
+use crate::game::{TilePixel, game::Rotation};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct TileId(pub u32);
