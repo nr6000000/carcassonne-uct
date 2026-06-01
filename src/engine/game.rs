@@ -5,7 +5,7 @@ use std::fmt::Display;
 use std::iter;
 
 use heapless::{Vec as ArrayVec};
-use itertools::Itertools;
+use itertools::{Itertools, structs};
 use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
 use tileset_format::TilePixel::Nothing;
@@ -343,8 +343,16 @@ impl Game {
                         current.connects(&seed_pixel)
                     },
                 );
-
-                let points = self.get_structure_score(&tiles, in_game);
+                
+                let points = if seed_pixel == TilePixel::Field {
+                    if in_game {
+                        0
+                    } else {
+                        self.get_field_score(seed)
+                    }
+                } else {
+                    self.get_structure_score(&tiles, in_game)
+                };
 
                 structures.push(Structure {
                     completed,
@@ -359,9 +367,57 @@ impl Game {
         structures
     }
 
-    fn score_field(&self) -> u32 {
-        // TODO
-        0
+    fn get_field_score(&self, seed: Index) -> u32 {
+        let mut cities = HashSet::new();
+        let mut followers_number: HashMap<PlayerId, u32> = HashMap::new();
+        let mut followers_idx = HashSet::new();
+        flood_fill(
+            seed, 
+            |idx| {
+                let current = self.map[idx];
+
+                // Flood fill algorithm queries for pixel that is not set
+                // which means the structure isnt fully connected
+                if current == TilePixel::City || current == TilePixel::PennantCity {
+                    cities.insert(idx);
+                }
+
+                if let Some(player) = self.followers.get(&idx) {
+                    *followers_number.entry(*player).or_default() += 1;
+                    followers_idx.insert(idx);
+                }
+
+                current.connects(&TilePixel::Field)
+            },
+        );
+
+        let mut score = 0;
+
+        while let Some(city_seed) = cities.iter().next() {
+            let mut completed = true;
+            flood_fill(
+                *city_seed, 
+                |idx| {
+                    let current = self.map[idx];
+                    cities.remove(&idx);
+
+                    // Flood fill algorithm queries for pixel that is not set
+                    // which means the structure isnt fully connected
+                    if current == TilePixel::Nothing {
+                        completed = false;
+                    }
+
+                    current.connects(&TilePixel::City)
+                },
+            );
+
+            if completed {
+                // TODO: Odmagicnumberować
+                score += 3;
+            }
+        }
+
+        score
     }
 
     fn get_structure_score(&self, tiles: &HashSet<Index>, in_game: bool) -> u32 {
