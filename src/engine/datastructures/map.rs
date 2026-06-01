@@ -1,9 +1,8 @@
-use std::{fmt::{Display, write}, iter, ops::{Index as IndexTrait, IndexMut}};
+use std::{collections::{HashMap, HashSet}, fmt::{Display, Error}, iter, ops::{Index as IndexTrait, IndexMut}};
+use std::fmt::Write;
 
 use itertools::Itertools;
-use tileset_format::TilePixel;
-
-use crate::engine::datastructures::index::Index;
+use crate::engine::{datastructures::index::Index, game::PlayerId};
 
 const GROWTH_FACTOR: usize = 2;
 
@@ -72,6 +71,61 @@ impl<T: Default + Copy> Map<T> {
     }
 }
 
+impl<T: Default + Eq + Display> Map<T> {
+    pub fn to_display_string(
+        &self, 
+        followers: Option<&HashMap<PlayerId, HashSet<Index>>>
+    ) -> Result<String, Error> {
+        let mut buf = String::new();
+
+        let (min_x, min_y, max_x, max_y) = (self.min_idx()..self.max_idx()+1)
+            .cartesian_product(self.min_idx()..self.max_idx()+1)
+            .fold(
+                (isize::MAX, isize::MAX, isize::MIN, isize::MIN), 
+                |(min_x, min_y, max_x, max_y), (x, y)| {
+                    if self[Index{x, y}] != T::default() {
+                        (min_x.min(x), min_y.min(y), max_x.max(x), max_y.max(y))
+                    } else {
+                        (min_x, min_y, max_x, max_y)
+                    }
+                }
+            );
+
+        if min_x == isize::MAX && min_y == isize::MAX
+            && max_x == isize::MIN && max_y == isize::MIN 
+        {
+            writeln!(buf, "empty")?;
+        }
+
+        write!(buf, "  ")?;
+        for column in min_x-1..max_x+2 {
+            write!(buf, "{}", if column == 0 {"00"} else {"  "});
+        }
+        write!(buf, "\n")?;
+
+        let flat_followers: Vec<&Index> = if let Some(followers) = followers {
+            followers.values().flatten().collect()
+        } else {
+            Vec::new()
+        };
+
+        for row in min_y-1..max_y+2 {
+            write!(buf, "{}", if row == 0 {"00"} else {"  "})?;
+            for column in min_x-1..max_x+2 {
+                write!(buf, "{}", self[(row, column)])?;
+                if flat_followers.contains(&&Index{x: column, y: row}) {
+                    buf.pop();
+                    buf.push('🯅');
+                }
+            }
+
+            write!(buf, "\n")?;
+        }
+
+        Ok(buf)
+    }
+}
+
 impl<T> Map<T> {
     fn center(&self) -> usize {
         self.size / 2
@@ -132,39 +186,7 @@ impl<T: Default + Copy> IndexMut<Index> for Map<T> {
 
 impl<T: Display + Default + Eq> Display for Map<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (min_x, min_y, max_x, max_y) = (self.min_idx()..self.max_idx()+1)
-            .cartesian_product(self.min_idx()..self.max_idx()+1)
-            .fold(
-                (isize::MAX, isize::MAX, isize::MIN, isize::MIN), 
-                |(min_x, min_y, max_x, max_y), (x, y)| {
-                    if self[Index{x, y}] != T::default() {
-                        (min_x.min(x), min_y.min(y), max_x.max(x), max_y.max(y))
-                    } else {
-                        (min_x, min_y, max_x, max_y)
-                    }
-                }
-            );
-
-        if min_x == isize::MAX && min_y == isize::MAX
-            && max_x == isize::MIN && max_y == isize::MIN 
-        {
-            writeln!(f, "empty")?;
-        }
-
-        write!(f, "  ")?;
-        for column in min_x-1..max_x+2 {
-            write!(f, "{}", if column == 0 {"00"} else {"  "})?;
-        }
-        write!(f, "\n")?;
-
-        for row in min_y-1..max_y+2 {
-            write!(f, "{}", if row == 0 {"00"} else {"  "})?;
-            for column in min_x-1..max_x+2 {
-                write!(f, "{}", self[(row, column)])?;
-            }
-
-            write!(f, "\n")?;
-        }
+        write!(f, "{}", self.to_display_string(None)?)?;
 
         Ok(())
     }

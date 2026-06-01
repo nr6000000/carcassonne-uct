@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 pub const TILE_SIZE: usize = 5;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub enum TilePixel {
     Nothing,
     Blockade,

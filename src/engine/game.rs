@@ -1,10 +1,14 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::PI;
 use std::fmt::Display;
+use std::iter;
 
-use heapless::Vec as ArrayVec;
+use heapless::{Vec as ArrayVec};
+use itertools::Itertools;
 use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
+use tileset_format::TilePixel::Nothing;
 use tileset_format::{TILE_SIZE, TileSet};
 
 use crate::engine::TilePixel;
@@ -12,11 +16,12 @@ use crate::engine::datastructures::direction::{Direction, OrdinalDirection};
 use crate::engine::datastructures::index::Index;
 use crate::engine::datastructures::map::{Map};
 use crate::engine::datastructures::multi_hashset::MultiHashSet;
-use crate::engine::tile::{Tile, TileId};
-use crate::engine::tilepixel_ext::TilePixelFits;
+use crate::engine::flood_fill::flood_fill;
+use crate::engine::tile::{NOTHING_TILE, Tile, TileId};
+use crate::engine::tilepixel_ext::TilePixelExt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-struct PlayerId(u32);
+pub struct PlayerId(u32);
 
 pub struct Game {
     move_num: u32,
@@ -24,7 +29,8 @@ pub struct Game {
     tiles: HashMap<TileId, Tile>,
     tiles_left: MultiHashSet<TileId>,
     free_places: HashSet<Place>,
-    followers_left: MultiHashSet<PlayerId>,
+    starting_followers: u32,
+    followers: HashMap<PlayerId, HashSet<Index>>,
 }
 
 #[derive(Debug, EnumIter, Clone, Copy)]
@@ -68,13 +74,14 @@ pub enum TileError {
     StaleMove,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Move {
     move_num: u32,
     place: Place,
     tile: TileId,
     rotation: Rotation,
-    follower: Option<usize>,
+    follower: Option<Index>,
+    player: PlayerId,
 }
 
 impl Move {
@@ -83,8 +90,16 @@ impl Move {
     }
 }
 
+#[derive(Debug)]
+struct Structure {
+    tiles: HashSet<Index>,
+    completed: bool,
+    points: u32,
+    followers: HashMap<PlayerId, u32>,
+}
+
 impl Game {
-    pub fn new(tileset: &TileSet, number_players: u32) -> Game {
+    pub fn new(tileset: &TileSet, number_players: u32, starting_followers: u32) -> Game {
         // To support perfect circle with A tiles we need size of approx:
         // A = pi*r^2
         // r = sqrt(A/pi)
@@ -111,7 +126,6 @@ impl Game {
         }
         
         let starting_place = Place{x: 0, y: 0};
-        let starting_followers = 8;
 
         let mut game = Game{
             move_num: 0,
@@ -119,8 +133,9 @@ impl Game {
             tiles,
             tiles_left,
             free_places: HashSet::new(),
-            followers_left: MultiHashSet::from_iter(
-                (0..number_players).map(|id| (PlayerId(id), starting_followers))
+            starting_followers,
+            followers: HashMap::from_iter(
+                (0..number_players).map(|i| (PlayerId(i), HashSet::new()))
             ),
         };
 
@@ -138,6 +153,10 @@ impl Game {
         game
     }
 
+    pub fn get_players(&self) -> impl Iterator<Item = PlayerId> {
+        self.followers.keys().copied()
+    }
+
     fn place_index(&self, place: &Place) -> Index {
         Index {
             x: place.x*TILE_SIZE as isize,
@@ -145,14 +164,21 @@ impl Game {
         }
     }
 
+    fn index_place(&self, index: &Index) -> Place {
+        Place { 
+            x: index.x.div_euclid(TILE_SIZE as isize), 
+            y: index.y.div_euclid(TILE_SIZE as isize),
+        }
+    }
+
     fn place_occupied(&self, place: &Place) -> bool {
         self.map[self.place_index(place)] != TilePixel::Nothing
     }
 
-    fn neighbour_count(&self, place: &Place) -> usize {
+    fn neighbour_count(&self, place: &Place) -> u32 {
         Direction::iter()
             .filter(|dir| self.place_occupied(&place.neighbour(dir.into())))
-            .count()
+            .count() as u32
     }
 
     fn empty_neighbour_places(&self, place: &Place) -> ArrayVec<Place, 4> {
@@ -162,10 +188,10 @@ impl Game {
             .collect()
     }
 
-    pub fn get_moves(&self) -> Vec<Move> {
+    fn get_moves_placement(&self, player: PlayerId) -> Vec<Move> {
         let mut moves: Vec<Move> = Vec::new(); 
         for tile_id in self.tiles_left.elements() {
-            let tile = &self.tiles[tile_id];
+            let tile = self.tiles[&tile_id];
 
             for place in self.free_places.iter() {
                 for rotation in Rotation::iter() {
@@ -176,12 +202,52 @@ impl Game {
                             tile: *tile_id,
                             rotation,
                             follower: None,
+                            player,
                         });
                     }
                 }
             }
         }
 
+        moves
+    }
+
+    fn get_moves_structures(&mut self, moves: Vec<Move>) -> Vec<Move> {
+        moves.into_iter().flat_map(|mov| {
+            let tile = self.tiles[&mov.tile];
+            self.copy_tile(&tile, mov.rotation, mov.place);
+
+            let structures = self.get_structures(&mov.place);
+            let mut moves: ArrayVec<Move, 9> = ArrayVec::from_array([mov]);
+            if self.followers[&mov.player].len() < self.starting_followers as usize {
+                moves.extend(
+                    structures.iter()
+                    .filter(|structure| structure.followers
+                        .iter().all(|(_, &number)| number == 0)
+                    )
+                    .map(|structure| {
+                        let mut new_mov = mov.clone();
+                        new_mov.follower = Some(
+                            structure.tiles.iter()
+                                .filter(|&tile| self.index_place(tile) == mov.place)
+                                .next()
+                                .copied()
+                                .unwrap()
+                        );
+                        new_mov
+                    })
+                );
+            }
+            
+            self.copy_tile(&NOTHING_TILE, Rotation::Rot0, mov.place);
+            moves
+        })
+        .collect()
+    }
+
+    pub fn get_moves(&mut self, player: PlayerId) -> Vec<Move> {
+        let mut moves = self.get_moves_placement(player);
+        moves = self.get_moves_structures(moves);
         moves
     }
 
@@ -201,23 +267,23 @@ impl Game {
 
         for dir in Direction::iter() {
             for i in 0..TILE_SIZE {
-                let compared = self.place_index(&place.neighbour(&dir.into()));
+                let other = self.place_index(&place.neighbour(&dir.into()));
+                let stride = match dir {
+                    Direction::North => Index{x: i as isize, y: TILE_SIZE as isize-1},
+                    Direction::East => Index{x: 0, y: i as isize},
+                    Direction::South => Index{x: i as isize, y: 0},
+                    Direction::West => Index{x: TILE_SIZE as isize-1, y: i as isize},
+                };
+                let other_pixel = self.map[other+stride];
 
-                let map_idx = match dir {
-                    Direction::North => compared+Index{x: i as isize, y: TILE_SIZE as isize-1},
-                    Direction::East => compared+Index{x: 0, y: i as isize},
-                    Direction::South => compared+Index{x: i as isize, y: 0},
-                    Direction::West => compared+Index{x: TILE_SIZE as isize-1, y: i as isize},
+                let our_pixel = match dir {
+                    Direction::North => tile[(0, i, *rotation)],
+                    Direction::East => tile[(i, TILE_SIZE-1, *rotation)],
+                    Direction::South => tile[(TILE_SIZE-1, i, *rotation)],
+                    Direction::West => tile[(i, 0, *rotation)],
                 };
 
-                let edge_fits = match dir {
-                    Direction::North => self.map[map_idx].fits(&tile[(0, i, *rotation)]),
-                    Direction::East => self.map[map_idx].fits(&tile[(i, TILE_SIZE-1, *rotation)]),
-                    Direction::South => self.map[map_idx].fits(&tile[(TILE_SIZE-1, i, *rotation)]),
-                    Direction::West => self.map[map_idx].fits(&tile[(i, 0, *rotation)]),
-                };
-
-                if !edge_fits {
+                if !our_pixel.fits(&other_pixel) {
                     return Err(TileError::DoesntFit);
                 }
             }
@@ -242,6 +308,84 @@ impl Game {
         }
     }
 
+    fn get_structures(&self, place: &Place) -> ArrayVec<Structure, 9> {
+        let index = self.place_index(place);
+
+        let tile_indices = (0..5).cartesian_product(0..5)
+            .map(|(x, y)| Index{x, y} + index);
+        let mut not_visited: HashSet<Index> = HashSet::from_iter(tile_indices);
+
+        let mut structures: ArrayVec<Structure, 9> = ArrayVec::new();
+        while let Some(seed) = not_visited.iter().next().copied() {
+            not_visited.remove(&seed);
+            let seed_pixel = self.map[seed];
+
+            if TilePixel::scoring_tiles().contains(&seed_pixel) {
+                let tiles: RefCell<HashSet<Index>> = RefCell::new(HashSet::new());
+                let mut completed = true;
+                flood_fill(
+                    seed, 
+                    |idx| {
+                        let current = self.map[idx];
+
+                        // Flood fill algorithm queries for pixel that is not set
+                        // which means the structure isnt fully connected
+                        if current == TilePixel::Nothing {
+                            completed = false;
+                        }
+
+                        current.connects(&seed_pixel)
+                    },
+                    |idx| { tiles.borrow_mut().insert(idx); },
+                    |idx| { tiles.borrow().contains(&idx) },
+                );
+                let tiles = tiles.into_inner();
+
+                let followers = HashMap::from_iter(
+                    self.followers.keys()
+                    .map(|player_id| (
+                            *player_id, 
+                            self.followers[player_id].intersection(&tiles).count() as u32
+                    ))
+                );
+                let points = self.score_structure(&tiles, true);
+
+                not_visited = not_visited.difference(&tiles).copied().collect();
+                structures.push(Structure {
+                    tiles: tiles,
+                    completed,
+                    points,
+                    followers,
+                }).unwrap();
+            }
+        }
+
+        structures
+    }
+
+    fn score_field(&self) -> u32 {
+        // TODO
+        0
+    }
+
+    fn score_structure(&self, tiles: &HashSet<Index>, in_game: bool) -> u32 {
+        let scoring_places = tiles.iter()
+            .map(|idx| (self.map[*idx], self.index_place(idx)))
+            .unique();
+
+        scoring_places
+            .map(|(pixel, place)| {
+                match pixel {
+                    TilePixel::Road | TilePixel::City | TilePixel::PennantCity => 
+                        pixel.score(in_game),
+                    TilePixel::Cloister => self.neighbour_count(&place) + 1,
+                    TilePixel::Field => self.score_field(),
+                    _ => 0,
+                }
+            })
+            .sum()
+    }
+
     pub fn play_move(&mut self, mov: Move) -> Result<(), TileError>{
         if self.move_num != mov.move_num {
             return Err(TileError::StaleMove)
@@ -256,13 +400,18 @@ impl Game {
         self.free_places.remove(&mov.place);
         self.free_places.extend(self.empty_neighbour_places(&mov.place));
 
+        if let Some(follower) = mov.follower {
+            self.followers.entry(mov.player)
+                .and_modify(|e| {e.insert(follower);});
+        }
+
         Ok(())
     }
 }
 
 impl Display for Game {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", self.map)?;
+        writeln!(f, "{}", self.map.to_display_string(Some(&self.followers))?)?;
         writeln!(f, "Free places: {:?}", self.free_places)?;
 
         Ok(())
@@ -280,7 +429,7 @@ mod tests {
         let tile = &Tile::new(*STANDARD_TILESET.tiles.get("CRFR").unwrap());
         let tile2 = &Tile::new(*STANDARD_TILESET.tiles.get("RRRR").unwrap());
 
-        let mut game = Game::new(&STANDARD_TILESET.clone(), 2);
+        let mut game = Game::new(&STANDARD_TILESET.clone(), 2, 8);
         game.copy_tile(tile, Rotation::Rot0, Place { x: 0, y: 0 });
 
         assert!(game.check_tile(tile2, &Place { x: -1, y: 0 }, &Rotation::Rot0).is_ok());
@@ -291,7 +440,7 @@ mod tests {
         let tile = &Tile::new(*STANDARD_TILESET.tiles.get("CRFR").unwrap());
         let tile2 = &Tile::new(*STANDARD_TILESET.tiles.get("FFFF_CLOISTER").unwrap());
 
-        let mut game = Game::new(&STANDARD_TILESET.clone(), 2);
+        let mut game = Game::new(&STANDARD_TILESET.clone(), 2, 8);
         game.copy_tile(tile, Rotation::Rot0, Place { x: 0, y: 0 });
 
         assert!(game.check_tile(tile2, &Place { x: 0, y: -1 }, &Rotation::Rot0).is_err());
@@ -302,7 +451,7 @@ mod tests {
         let tile = &Tile::new(*STANDARD_TILESET.tiles.get("FRFR").unwrap());
         let tile2 = &Tile::new(*STANDARD_TILESET.tiles.get("FFRR").unwrap());
 
-        let mut game = Game::new(&STANDARD_TILESET.clone(), 2);
+        let mut game = Game::new(&STANDARD_TILESET.clone(), 2, 8);
         game.copy_tile(tile, Rotation::Rot1, Place { x: 0, y: 0 });
 
         assert!(game.check_tile(tile2, &Place { x: 0, y: -1 }, &Rotation::Rot2).is_err());

@@ -1,6 +1,6 @@
 use std::ops::{Add, Sub};
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Default)]
 pub struct Index {
     pub x: isize,
     pub y: isize,

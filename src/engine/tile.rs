@@ -11,10 +11,12 @@ pub struct TileId(pub u32);
 pub struct Tile([[TilePixel; TILE_SIZE]; TILE_SIZE]);
 
 impl Tile {
-    pub fn new(content: [[TilePixel; TILE_SIZE]; TILE_SIZE]) -> Self {
+    pub const fn new(content: [[TilePixel; TILE_SIZE]; TILE_SIZE]) -> Self {
         Self(content)
     }
 }
+
+pub const NOTHING_TILE: Tile = Tile::new([[TilePixel::Nothing; TILE_SIZE]; TILE_SIZE]);
 
 impl Index<(usize, usize, Rotation)> for Tile {
     type Output = TilePixel;

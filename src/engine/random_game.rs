@@ -1,16 +1,24 @@
-use crate::engine::{game::Game};
+use std::iter;
+
+use crate::engine::game::{Game, PlayerId};
 use rand::{RngExt};
 
 pub fn gen_random_game(game: &mut Game) {
     let mut rng = rand::rng();
+    let mut current_player = game
+        .get_players()
+        .collect::<Vec<PlayerId>>()
+        .into_iter()
+        .cycle();
 
     println!("Starting map");
     println!("{}", game);
-    let mut moves = game.get_moves();
+
+    let mut moves = game.get_moves(current_player.next().unwrap());
     while !moves.is_empty() {
-        moves = game.get_moves(); 
+        moves = game.get_moves(current_player.next().unwrap()); 
         if !moves.is_empty() {
-            // println!("Moves: {:#?}", moves.len());
+            // println!("Moves: {:#?}", moves);
             let idx = rng.random_range(0..moves.len());
             let chosen_move = moves.swap_remove(idx);
 

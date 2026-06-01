@@ -4,6 +4,6 @@ mod engine;
 
 fn main() {
     let tileset = STANDARD_TILESET.clone();
-    let mut game = Game::new(&tileset, 2);
+    let mut game = Game::new(&tileset, 2, 8);
     gen_random_game(&mut game);
 }
