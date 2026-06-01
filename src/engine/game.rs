@@ -29,8 +29,9 @@ pub struct Game {
     tiles: HashMap<TileId, Tile>,
     tiles_left: MultiHashSet<TileId>,
     free_places: HashSet<Place>,
-    starting_followers: u32,
-    followers: HashMap<PlayerId, HashSet<Index>>,
+    followers: HashMap<Index, PlayerId>,
+    followers_left: HashMap<PlayerId, u32>,
+    score: HashMap<PlayerId, u32>,
 }
 
 #[derive(Debug, EnumIter, Clone, Copy)]
@@ -92,10 +93,11 @@ impl Move {
 
 #[derive(Debug)]
 struct Structure {
-    tiles: HashSet<Index>,
     completed: bool,
     points: u32,
-    followers: HashMap<PlayerId, u32>,
+    followers_number: HashMap<PlayerId, u32>,
+    followers_idx: HashSet<Index>,
+    seed: Index,
 }
 
 impl Game {
@@ -133,9 +135,12 @@ impl Game {
             tiles,
             tiles_left,
             free_places: HashSet::new(),
-            starting_followers,
-            followers: HashMap::from_iter(
-                (0..number_players).map(|i| (PlayerId(i), HashSet::new()))
+            followers_left: HashMap::from_iter(
+                (0..number_players).map(|i| (PlayerId(i), starting_followers)),
+            ),
+            followers: HashMap::new(),
+            score: HashMap::from_iter(
+                (0..number_players).map(|i| (PlayerId(i), 0)),
             ),
         };
 
@@ -154,7 +159,7 @@ impl Game {
     }
 
     pub fn get_players(&self) -> impl Iterator<Item = PlayerId> {
-        self.followers.keys().copied()
+        self.followers_left.keys().copied()
     }
 
     fn place_index(&self, place: &Place) -> Index {
@@ -217,23 +222,17 @@ impl Game {
             let tile = self.tiles[&mov.tile];
             self.copy_tile(&tile, mov.rotation, mov.place);
 
-            let structures = self.get_structures(&mov.place);
+            let structures = self.get_structures(&mov.place, true);
             let mut moves: ArrayVec<Move, 9> = ArrayVec::from_array([mov]);
-            if self.followers[&mov.player].len() < self.starting_followers as usize {
+            if self.followers_left[&mov.player] > 0 {
                 moves.extend(
                     structures.iter()
-                    .filter(|structure| structure.followers
+                    .filter(|structure| structure.followers_number
                         .iter().all(|(_, &number)| number == 0)
                     )
                     .map(|structure| {
                         let mut new_mov = mov.clone();
-                        new_mov.follower = Some(
-                            structure.tiles.iter()
-                                .filter(|&tile| self.index_place(tile) == mov.place)
-                                .next()
-                                .copied()
-                                .unwrap()
-                        );
+                        new_mov.follower = Some(structure.seed);
                         new_mov
                     })
                 );
@@ -308,7 +307,7 @@ impl Game {
         }
     }
 
-    fn get_structures(&self, place: &Place) -> ArrayVec<Structure, 9> {
+    fn get_structures(&self, place: &Place, in_game: bool) -> ArrayVec<Structure, 9> {
         let index = self.place_index(place);
 
         let tile_indices = (0..5).cartesian_product(0..5)
@@ -321,12 +320,14 @@ impl Game {
             let seed_pixel = self.map[seed];
 
             if TilePixel::scoring_tiles().contains(&seed_pixel) {
-                let tiles: RefCell<HashSet<Index>> = RefCell::new(HashSet::new());
                 let mut completed = true;
-                flood_fill(
+                let mut followers_number = HashMap::new();
+                let mut followers_idx = HashSet::new();
+                let tiles = flood_fill(
                     seed, 
                     |idx| {
                         let current = self.map[idx];
+                        not_visited.remove(&idx);
 
                         // Flood fill algorithm queries for pixel that is not set
                         // which means the structure isnt fully connected
@@ -334,28 +335,23 @@ impl Game {
                             completed = false;
                         }
 
+                        if let Some(player) = self.followers.get(&idx) {
+                            *followers_number.entry(*player).or_default() += 1;
+                            followers_idx.insert(idx);
+                        }
+
                         current.connects(&seed_pixel)
                     },
-                    |idx| { tiles.borrow_mut().insert(idx); },
-                    |idx| { tiles.borrow().contains(&idx) },
                 );
-                let tiles = tiles.into_inner();
 
-                let followers = HashMap::from_iter(
-                    self.followers.keys()
-                    .map(|player_id| (
-                            *player_id, 
-                            self.followers[player_id].intersection(&tiles).count() as u32
-                    ))
-                );
-                let points = self.score_structure(&tiles, true);
+                let points = self.get_structure_score(&tiles, in_game);
 
-                not_visited = not_visited.difference(&tiles).copied().collect();
                 structures.push(Structure {
-                    tiles: tiles,
                     completed,
                     points,
-                    followers,
+                    followers_number,
+                    followers_idx,
+                    seed,
                 }).unwrap();
             }
         }
@@ -368,7 +364,7 @@ impl Game {
         0
     }
 
-    fn score_structure(&self, tiles: &HashSet<Index>, in_game: bool) -> u32 {
+    fn get_structure_score(&self, tiles: &HashSet<Index>, in_game: bool) -> u32 {
         let scoring_places = tiles.iter()
             .map(|idx| (self.map[*idx], self.index_place(idx)))
             .unique();
@@ -379,18 +375,35 @@ impl Game {
                     TilePixel::Road | TilePixel::City | TilePixel::PennantCity => 
                         pixel.score(in_game),
                     TilePixel::Cloister => self.neighbour_count(&place) + 1,
-                    TilePixel::Field => self.score_field(),
                     _ => 0,
                 }
             })
             .sum()
     }
 
+    fn score_structure(&mut self, structure: &Structure) {
+        let scoring_players = structure.followers_number.iter()
+            .max_set_by_key(|(_, number)| *number)
+            .into_iter()
+            .map(|(player, _)| player);
+
+        for player in scoring_players {
+            self.score.entry(*player).and_modify(|score| *score += structure.points);
+        }
+
+        for (player, number) in structure.followers_number.iter() {
+            self.followers_left.entry(*player).and_modify(|el| *el += number);
+        }
+
+        for idx in structure.followers_idx.iter() {
+            self.followers.remove(idx);
+        }
+    }
+
     pub fn play_move(&mut self, mov: Move) -> Result<(), TileError>{
         if self.move_num != mov.move_num {
             return Err(TileError::StaleMove)
         }
-
         self.move_num += 1;
 
         let tile = self.tiles[&mov.tile];
@@ -401,18 +414,39 @@ impl Game {
         self.free_places.extend(self.empty_neighbour_places(&mov.place));
 
         if let Some(follower) = mov.follower {
-            self.followers.entry(mov.player)
-                .and_modify(|e| {e.insert(follower);});
+            self.followers.insert(follower, mov.player);
+            self.followers_left.entry(mov.player).and_modify(|count| *count -= 1);
+        }
+
+        let structures = self.get_structures(&mov.place, true).into_iter()
+            .filter(|structure| structure.completed);
+        for structure in structures {
+            self.score_structure(&structure);
         }
 
         Ok(())
+    }
+
+    pub fn end_game(&mut self) {
+        let mut left_to_score: HashSet<Index> = HashSet::from_iter(self.followers.keys().copied());
+        while !left_to_score.is_empty() {
+            let idx = left_to_score.iter().copied().next().unwrap();
+            let structure = self.get_structures(&self.index_place(&idx), false)
+                .into_iter()
+                .filter(|structure| structure.followers_idx.contains(&idx))
+                .next()
+                .unwrap();
+
+            self.score_structure(&structure);
+            left_to_score = &left_to_score - &structure.followers_idx;
+        }
     }
 }
 
 impl Display for Game {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.map.to_display_string(Some(&self.followers))?)?;
-        writeln!(f, "Free places: {:?}", self.free_places)?;
+        writeln!(f, "Score: {:?}", self.score)?;
 
         Ok(())
     }

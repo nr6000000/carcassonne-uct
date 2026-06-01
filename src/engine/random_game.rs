@@ -30,4 +30,8 @@ pub fn gen_random_game(game: &mut Game) {
             println!();
         }
     }   
+
+    game.end_game();
+    println!("Game over");
+    println!("{}", game)
 }

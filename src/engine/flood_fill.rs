@@ -1,7 +1,8 @@
-use tinyvec::tiny_vec;
+use std::collections::HashSet;
 
 use crate::engine::datastructures::index::Index;
 
+/// Tak naprawdę to nie:
 /// Span-based scanline flood fill.
 ///
 /// Fills a connected region starting at `(x, y)` by processing entire
@@ -12,37 +13,28 @@ use crate::engine::datastructures::index::Index;
 /// * `index`  – Seed x and y index
 /// * `inside` – Returns `true` for any pixel that should still be filled
 /// * `set`    – Called exactly once per pixel to mark it as filled
-pub fn flood_fill<F, S, R>(
+pub fn flood_fill<F>(
     seed: Index,
     mut inside: F, 
-    mut set: S,
-    mut visited: R,
-)
+) -> HashSet<Index>
 where
     F: FnMut(Index) -> bool,
-    S: FnMut(Index),
-    R: FnMut(Index) -> bool,
 {
     // Ensure the starting pixel actually meets the condition
     if !inside(seed) {
-        return;
+        return HashSet::new();
     }
-    
-    // Mark the initial pixel immediately
-    set(seed);
-    
-    // A 5x5 array has at most 25 pixels. A fixed stack of 32 entirely 
-    // avoids heap allocations for small sizes, making it extremely fast.
-    let mut stack = tiny_vec!([Index; 32]);
-    stack.push(seed);
+
+    let mut visited = HashSet::from([seed]);
+    let mut stack = Vec::from([seed]);
         
     while !stack.is_empty() {
         // Pop from the heap stack first if it's active, otherwise use the fast local stack
         let current = stack.pop().unwrap();
         
         let mut check_neighbor = |idx: Index| {
-            if inside(idx) && !visited(idx) {
-                set(idx); 
+            if inside(idx) && !visited.contains(&idx) {
+                visited.insert(idx); 
                 stack.push(idx);
             }
         };
@@ -53,4 +45,6 @@ where
         check_neighbor(current + Index{x: -1, y: 0});
         check_neighbor(current + Index{x: 0, y: -1});
     }
+
+    visited
 }

@@ -74,7 +74,7 @@ impl<T: Default + Copy> Map<T> {
 impl<T: Default + Eq + Display> Map<T> {
     pub fn to_display_string(
         &self, 
-        followers: Option<&HashMap<PlayerId, HashSet<Index>>>
+        followers: Option<&HashMap<Index, PlayerId>>,
     ) -> Result<String, Error> {
         let mut buf = String::new();
 
@@ -99,21 +99,18 @@ impl<T: Default + Eq + Display> Map<T> {
 
         write!(buf, "  ")?;
         for column in min_x-1..max_x+2 {
-            write!(buf, "{}", if column == 0 {"00"} else {"  "});
+            write!(buf, "{}", if column == 0 {"00"} else {"  "})?;
         }
         write!(buf, "\n")?;
-
-        let flat_followers: Vec<&Index> = if let Some(followers) = followers {
-            followers.values().flatten().collect()
-        } else {
-            Vec::new()
-        };
 
         for row in min_y-1..max_y+2 {
             write!(buf, "{}", if row == 0 {"00"} else {"  "})?;
             for column in min_x-1..max_x+2 {
                 write!(buf, "{}", self[(row, column)])?;
-                if flat_followers.contains(&&Index{x: column, y: row}) {
+                
+                if let Some(followers) = followers && 
+                    followers.contains_key(&&Index{x: column, y: row}) 
+                {
                     buf.pop();
                     buf.push('🯅');
                 }
