@@ -338,7 +338,7 @@ impl Game {
                         }
 
                         current.connects(&seed_pixel)
-                    },
+                    }
                 );
                 
                 let points = if seed_pixel == TilePixel::Field {
