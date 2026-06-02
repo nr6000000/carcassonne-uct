@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}, fmt::{Display, Error}, iter, ops::{In
 use std::fmt::Write;
 
 use itertools::Itertools;
-use crate::game::{datastructures::index::Index, game::PlayerId};
+use crate::game_logic::{datastructures::index::Index, game::PlayerId};
 
 const GROWTH_FACTOR: usize = 2;
 
@@ -191,7 +191,7 @@ impl<T: Display + Default + Eq> Display for Map<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::game::TilePixel;
+    use crate::game_logic::TilePixel;
 
     use super::*;
 

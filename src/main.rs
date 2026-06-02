@@ -1,6 +1,6 @@
-use crate::{engines::{carcassonne_engine::CarcassonneEngine, random_engine::RandomEngine}, game::{game::{Game, PlayerId}, standard_tileset::STANDARD_TILESET}};
+use crate::{engines::{carcassonne_engine::CarcassonneEngine, random_engine::RandomEngine}, game_logic::{game::{Game, PlayerId}, standard_tileset::STANDARD_TILESET}};
 
-mod game;
+mod game_logic;
 mod engines;
 
 fn main() {
@@ -38,5 +38,5 @@ fn main() {
 
     game.end_game();
     println!("Game over");
-    println!("{}", game)
+    println!("{}", game);
 }

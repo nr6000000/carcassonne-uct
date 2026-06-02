@@ -8,14 +8,14 @@ use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
 use tileset_format::{TILE_SIZE, TileSet};
 
-use crate::game::TilePixel;
-use crate::game::datastructures::direction::{Direction, OrdinalDirection};
-use crate::game::datastructures::index::Index;
-use crate::game::datastructures::map::{Map};
-use crate::game::datastructures::multi_hashset::MultiHashSet;
-use crate::game::flood_fill::flood_fill;
-use crate::game::tile::{NOTHING_TILE, Tile, TileId};
-use crate::game::tilepixel_ext::TilePixelExt;
+use crate::game_logic::TilePixel;
+use crate::game_logic::datastructures::direction::{Direction, OrdinalDirection};
+use crate::game_logic::datastructures::index::Index;
+use crate::game_logic::datastructures::map::{Map};
+use crate::game_logic::datastructures::multi_hashset::MultiHashSet;
+use crate::game_logic::flood_fill::flood_fill;
+use crate::game_logic::tile::{NOTHING_TILE, Tile, TileId};
+use crate::game_logic::tilepixel_ext::TilePixelExt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct PlayerId(u32);
@@ -507,7 +507,7 @@ impl Display for Game {
 
 #[cfg(test)]
 mod tests {
-    use crate::game::standard_tileset::STANDARD_TILESET;
+    use crate::game_logic::standard_tileset::STANDARD_TILESET;
 
     use super::*;
 

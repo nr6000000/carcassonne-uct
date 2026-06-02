@@ -2,7 +2,7 @@ use rand::rngs::ThreadRng;
 
 use rand::{RngExt};
 
-use crate::{engines::carcassonne_engine::CarcassonneEngine, game::game::{Move, PlayerId}};
+use crate::{engines::carcassonne_engine::CarcassonneEngine, game_logic::game::{Move, PlayerId}};
 
 pub struct RandomEngine {
     rng: ThreadRng
