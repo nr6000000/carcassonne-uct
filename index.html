@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8" />
+    <title>hello-wasm example</title>
+  </head>
+  <body>
+    <script type="module">
+      import init, { wasm_test_main } from "./pkg/carcossonne_uct.js";
+
+      init().then(() => {
+        wasm_test_main();
+      });
+    </script>
+  </body>
+</html>

@@ -1,2 +1,57 @@
 pub mod game_logic;
 pub mod engines;
+mod js_binds;
+
+use std::collections::HashMap;
+
+use wasm_bindgen::prelude::*;
+
+use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyEngine, random_engine::RandomEngine}, game_logic::{game::{Game, PlayerId}, standard_tileset::STANDARD_TILESET}, js_binds::log::log};
+
+fn run() -> Game {
+    let tileset = STANDARD_TILESET.clone();
+    let mut game = Game::new(&tileset, 2, 8);
+
+    let random_engine = RandomEngine::new();
+    let greedy_engine = GreedyEngine::new();
+    
+    let players_ids = game
+        .get_players()
+        .collect::<Vec<PlayerId>>();
+    let [player1, player2] = players_ids.as_slice() else {
+        panic!();
+    };
+
+    let mut current_player_gen = [
+        player1,
+        player2,
+    ].into_iter().cycle();
+
+    let mut players = HashMap::from([
+        (player1, Box::new(random_engine) as Box<dyn CarcassonneEngine>),
+        (player2, Box::new(greedy_engine)),
+    ]);
+
+    loop {
+        let current_player = current_player_gen.next().unwrap();
+        let (moves, structures) = game.get_moves(*current_player); 
+        if moves.len() == 0 {
+            break;
+        }
+
+        let chosen_move = players.get_mut(current_player).unwrap()
+            .play_move(moves, structures, *current_player);
+
+        game.play_move(chosen_move)
+            .unwrap_or_else(|err| panic!("Bład gry: {}", err));
+    }   
+
+    game.end_game();
+    game
+}
+
+#[wasm_bindgen]
+pub fn wasm_test_main() {
+    let game = run();
+    log(&game.to_string());
+}

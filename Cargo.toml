@@ -3,15 +3,21 @@ name = "carcossonne_uct"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 heapless = "0.9.3"
 itertools = "0.14.0"
 postcard = "1.1.3"
 rand = "0.10.1"
+getrandom = { version = "0.4.2", features = ["wasm_js"] }
 strum = { version = "0.28", features = ["derive"] }
 thiserror = "2.0.18"
 tileset_format = { path = "tileset_format" }
 tinyvec = { version = "1.11.0", features = ["alloc"] }
+wasm-bindgen = "0.2.122"
+js-sys = "0.3.99"
 
 [build-dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
