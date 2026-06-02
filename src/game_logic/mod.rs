@@ -5,4 +5,5 @@ mod tilepixel_ext;
 mod tile;
 mod flood_fill;
 
+pub use datastructures::index::Index;
 pub use tileset_format::TilePixel;

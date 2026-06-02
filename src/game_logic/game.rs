@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::PI;
 use std::fmt::Display;
+use std::iter;
 
 use heapless::{Vec as ArrayVec};
-use itertools::{Itertools};
+use itertools::{Itertools, structs};
 use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
 use tileset_format::{TILE_SIZE, TileSet};
@@ -40,7 +41,7 @@ pub enum Rotation {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct Place {
+pub struct Place {
     x: isize,
     y: isize,
 }
@@ -86,15 +87,23 @@ impl Move {
     pub fn get_move_num(&self) -> u32 {
         self.move_num
     }
+
+    pub fn get_place(&self) -> Place {
+        self.place
+    }
+
+    pub fn get_follower(&self) -> Option<Index> {
+        self.follower
+    }
 }
 
 #[derive(Debug)]
-struct Structure {
-    completed: bool,
-    points: u32,
-    followers_number: HashMap<PlayerId, u32>,
-    followers_idx: HashSet<Index>,
-    seed: Index,
+pub struct Structure {
+    pub completed: bool,
+    pub points: u32,
+    pub followers_number: HashMap<PlayerId, u32>,
+    pub followers_idx: HashSet<Index>,
+    pub seed: Index,
 }
 
 impl Game {
@@ -214,37 +223,46 @@ impl Game {
         moves
     }
 
-    fn get_moves_structures(&mut self, moves: Vec<Move>) -> Vec<Move> {
-        moves.into_iter().flat_map(|mov| {
-            let tile = self.tiles[&mov.tile];
-            self.copy_tile(&tile, mov.rotation, mov.place);
+    fn get_moves_structures(
+        &mut self, 
+        moves: Vec<Move>
+    ) -> (Vec<Move>, HashMap<Index, Structure>) {
+        let (mut moves_with_followers, structures): (Vec<Move>, HashMap<Index, Structure>) = moves
+            .clone()
+            .into_iter()
+            .flat_map(|mov| {
+                let tile = self.tiles[&mov.tile];
 
-            let structures = self.get_structures(&mov.place, true);
-            let mut moves: ArrayVec<Move, 9> = ArrayVec::from_array([mov]);
-            if self.followers_left[&mov.player] > 0 {
-                moves.extend(
-                    structures.iter()
-                    .filter(|structure| structure.followers_number
-                        .iter().all(|(_, &number)| number == 0)
-                    )
-                    .map(|structure| {
-                        let mut new_mov = mov.clone();
-                        new_mov.follower = Some(structure.seed);
-                        new_mov
-                    })
-                );
-            }
-            
-            self.copy_tile(&NOTHING_TILE, Rotation::Rot0, mov.place);
-            moves
-        })
-        .collect()
+                self.copy_tile(&tile, mov.rotation, mov.place);
+                let structures = self.get_structures(&mov.place, true);
+                self.copy_tile(&NOTHING_TILE, Rotation::Rot0, mov.place);
+
+                (self.followers_left[&mov.player] > 0).then(||
+                    structures.into_iter()
+                        .filter(|structure| structure.followers_number
+                            .iter().all(|(_, &number)| number == 0)
+                        )
+                        .map(move |structure| (mov, structure))
+                ).into_iter().flatten()
+            }).map(|(mov, structure)| {
+                let mut new_mov = mov.clone();
+                new_mov.follower = Some(structure.seed);
+                (new_mov, (structure.seed, structure))
+            }).unzip();
+        
+        moves_with_followers.extend(moves);
+        (
+            moves_with_followers,
+            structures
+        )
     }
 
-    pub fn get_moves(&mut self, player: PlayerId) -> Vec<Move> {
-        let mut moves = self.get_moves_placement(player);
-        moves = self.get_moves_structures(moves);
-        moves
+    pub fn get_moves(
+        &mut self, 
+        player: PlayerId
+    ) -> (Vec<Move>, HashMap<Index, Structure>) {
+        let moves = self.get_moves_placement(player);
+        self.get_moves_structures(moves)
     }
 
     fn check_tile(
@@ -342,11 +360,10 @@ impl Game {
                 );
                 
                 let points = if seed_pixel == TilePixel::Field {
-                    if in_game {
-                        0
-                    } else {
-                        self.get_field_score(seed)
-                    }
+                    // Obliczanie wyniku pola przy każdym ruchu jest trochę wolne.
+                    // Jak już będziemy wiedzieli jak chcemy robić heurestyki
+                    // to trzeba się będzie zastanowić jak to inteligentnie zrobić
+                    self.get_field_score(seed)
                 } else {
                     self.get_structure_score(&tiles, in_game)
                 };

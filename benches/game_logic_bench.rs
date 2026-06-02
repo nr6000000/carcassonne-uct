@@ -11,12 +11,12 @@ fn play_game(game: &mut Game, engine: &mut impl CarcassonneEngine) {
 
     loop {
         let current_player = current_player_gen.next().unwrap();
-        let moves = game.get_moves(current_player); 
+        let (moves, structures) = game.get_moves(current_player); 
         if moves.len() == 0 {
             break;
         }
 
-        let chosen_move = engine.play_move(moves, current_player);
+        let chosen_move = engine.play_move(moves, structures, current_player);
 
         game.play_move(chosen_move)
             .unwrap_or_else(|err| panic!("Bład gry: {}", err));
