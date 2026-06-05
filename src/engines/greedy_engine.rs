@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 
 use crate::game_logic::Index;
-use crate::game_logic::game::Structure;
+use crate::game_logic::structures::Structure;
 use crate::{engines::carcassonne_engine::CarcassonneEngine, game_logic::game::{Move, PlayerId}};
 
 pub struct GreedyEngine {}

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::game_logic::{Index, game::{Move, PlayerId, Structure}};
+use crate::game_logic::{Index, game::{Move, PlayerId}, structures::Structure};
 
 pub trait CarcassonneEngine {
     fn play_move(
