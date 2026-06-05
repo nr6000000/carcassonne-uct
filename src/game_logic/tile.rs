@@ -7,7 +7,7 @@ use crate::game_logic::{TilePixel, game::Rotation};
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct TileId(pub u32);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Tile([[TilePixel; TILE_SIZE]; TILE_SIZE]);
 
 impl Tile {

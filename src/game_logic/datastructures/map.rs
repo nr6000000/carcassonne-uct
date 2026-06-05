@@ -133,7 +133,7 @@ impl<T> Map<T> {
     }
 
     fn max_idx(&self) -> isize {
-        self.size as isize - self.center() as isize - 1
+        self.size as isize - self.center() as isize - 2
     }
 
     fn flat_index(&self, row: isize, column: isize) -> usize {
