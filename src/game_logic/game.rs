@@ -1,10 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::PI;
 use std::fmt::Display;
-use std::iter;
 
 use heapless::{Vec as ArrayVec};
-use itertools::{Itertools, structs};
+use itertools::Itertools;
 use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
 use tileset_format::{TILE_SIZE, TileSet};
@@ -14,7 +13,7 @@ use crate::game_logic::datastructures::direction::{Direction, OrdinalDirection};
 use crate::game_logic::datastructures::index::Index;
 use crate::game_logic::datastructures::map::{Map};
 use crate::game_logic::datastructures::multi_hashset::MultiHashSet;
-use crate::game_logic::flood_fill::flood_fill;
+use crate::game_logic::structures::Structure;
 use crate::game_logic::tile::{NOTHING_TILE, Tile, TileId};
 use crate::game_logic::tilepixel_ext::TilePixelExt;
 
@@ -23,15 +22,15 @@ pub struct PlayerId(u32);
 
 #[derive(Clone)]
 pub struct Game {
-    move_num: u32,
-    map: Map<TilePixel>,
-    tiles: HashMap<TileId, Tile>,
-    tiles_left: MultiHashSet<TileId>,
-    free_places: HashSet<Place>,
-    followers: HashMap<Index, PlayerId>,
-    followers_left: HashMap<PlayerId, u32>,
-    score: HashMap<PlayerId, u32>,
-    settings: GameSettings,
+    pub(crate) move_num: u32,
+    pub(crate) map: Map<TilePixel>,
+    pub(crate) tiles: HashMap<TileId, Tile>,
+    pub(crate) tiles_left: MultiHashSet<TileId>,
+    pub(crate) free_places: HashSet<Place>,
+    pub(crate) followers: HashMap<Index, PlayerId>,
+    pub(crate) followers_left: HashMap<PlayerId, u32>,
+    pub(crate) score: HashMap<PlayerId, u32>,
+    pub(crate) settings: GameSettings,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -118,27 +117,18 @@ impl Move {
     }
 }
 
-fn place_index(place: &Place) -> Index {
+pub(crate) fn place_index(place: &Place) -> Index {
         Index {
             x: place.x*TILE_SIZE as isize,
             y: place.y*TILE_SIZE as isize,
         }
     }
 
-fn index_place(index: &Index) -> Place {
+pub(crate) fn index_place(index: &Index) -> Place {
     Place { 
         x: index.x.div_euclid(TILE_SIZE as isize), 
         y: index.y.div_euclid(TILE_SIZE as isize),
     }
-}
-
-#[derive(Debug)]
-pub struct Structure {
-    pub completed: bool,
-    pub points: u32,
-    pub followers_number: HashMap<PlayerId, u32>,
-    pub followers_idx: HashSet<Index>,
-    pub seed: Index,
 }
 
 impl Game {
@@ -221,7 +211,7 @@ impl Game {
         self.map[place_index(place)] != TilePixel::Nothing
     }
 
-    fn neighbour_count(&self, place: &Place) -> u32 {
+    pub(crate) fn neighbour_count(&self, place: &Place) -> u32 {
         OrdinalDirection::iter()
             .filter(|dir| self.place_occupied(&place.neighbour(dir.into())))
             .count() as u32
@@ -355,181 +345,6 @@ impl Game {
                 self.map[map_idx] = tile[(y, x, rotation)];
             }
         }
-    }
-
-    fn get_structures(&self, place: &Place, in_game: bool) -> Vec<Structure> {
-        let index = place_index(place);
-
-        let tile_indices = (0..5).cartesian_product(0..5)
-            .map(|(x, y)| Index{x, y} + index);
-        let mut not_visited: HashSet<Index> = HashSet::from_iter(tile_indices);
-
-        let mut structures: Vec<Structure> = Vec::new();
-        while let Some(seed) = not_visited.iter().next().copied() {
-            not_visited.remove(&seed);
-            let seed_pixel = self.map[seed];
-
-            if TilePixel::scoring_tiles().contains(&seed_pixel) {
-                let mut completed = true;
-                let tiles = flood_fill(
-                    seed, 
-                    |idx| {
-                        let current = self.map[idx];
-
-                        // Flood fill algorithm queries for pixel that is not set
-                        // which means the structure isnt fully connected
-                        if current == TilePixel::Nothing {
-                            completed = false;
-                        }
-
-                        current.connects(&seed_pixel)
-                    }
-                );
-                not_visited.retain(|tile| !tiles.contains(tile));
-                
-                let mut followers_number = HashMap::new();
-                let mut followers_idx = HashSet::new();
-                let followers_iter = tiles.iter()
-                    .filter_map(|idx| self.followers.get(&idx).map(|p| (p, idx)));    
-                for (player, idx) in followers_iter {
-                    *followers_number.entry(*player).or_default() += 1;
-                    followers_idx.insert(*idx);
-                }
-                
-                let points = if seed_pixel == TilePixel::Field {
-                    // Obliczanie wyniku pola przy każdym ruchu jest trochę wolne.
-                    // Jak już będziemy wiedzieli jak chcemy robić heurestyki
-                    // to trzeba się będzie zastanowić jak to inteligentnie zrobić
-                    if self.settings.calculate_move_score_field {
-                        self.get_field_score(seed)
-                    } else {
-                        0
-                    }
-                } else {
-                    self.get_structure_score(&tiles, in_game)
-                };
-
-                // Real cloister completenes test
-                // TODO: Better flow - setting wrong completed and
-                // then chnaging it is confusing
-                if seed_pixel == TilePixel::Cloister {
-                    completed = points == 9;
-                }
-
-                structures.push(Structure {
-                    completed,
-                    points,
-                    followers_number,
-                    followers_idx,
-                    seed,
-                });
-            }
-        }
-
-        // Add neighbouring cloisters to check if placing this tile 
-        // has completed it
-        let cloisters = OrdinalDirection::iter()
-            .map(|dir| place.neighbour(&dir))
-            .filter_map(|place| {
-                let upper_left = place_index(&place);
-                // HARDCODED: Cloisters are always in the center
-                // May not be true
-                let idx = upper_left + Index{x: 2, y: 2};
-                if self.map[idx] == TilePixel::Cloister {
-                    if self.followers.contains_key(&idx) {
-                        let score = self.get_structure_score(&HashSet::from([idx]), in_game);
-                        if score == 9 {
-                            return Some(Structure {
-                                completed: true,
-                                points: 9,
-                                followers_number: HashMap::from([
-                                    (self.followers[&idx], 1)
-                                ]),
-                                followers_idx: HashSet::from([idx]),
-                                seed: idx,
-                            })
-                        }
-                    }
-                }
-
-                None
-            });
-        structures.extend(cloisters);
-
-        structures
-    }
-
-    fn get_field_score(&self, seed: Index) -> u32 {
-        let mut cities = HashSet::new();
-        let mut followers_number: HashMap<PlayerId, u32> = HashMap::new();
-        let mut followers_idx = HashSet::new();
-        flood_fill(
-            seed, 
-            |idx| {
-                let current = self.map[idx];
-
-                // Flood fill algorithm queries for pixel that is not set
-                // which means the structure isnt fully connected
-                if current == TilePixel::City || current == TilePixel::PennantCity {
-                    cities.insert(idx);
-                }
-
-                if let Some(player) = self.followers.get(&idx) {
-                    *followers_number.entry(*player).or_default() += 1;
-                    followers_idx.insert(idx);
-                }
-
-                current.connects(&TilePixel::Field)
-            },
-        );
-
-        let mut score = 0;
-
-        while let Some(city_seed) = cities.iter().next() {
-            let mut completed = true;
-            flood_fill(
-                *city_seed, 
-                |idx| {
-                    let current = self.map[idx];
-                    cities.remove(&idx);
-
-                    // Flood fill algorithm queries for pixel that is not set
-                    // which means the structure isnt fully connected
-                    if current == TilePixel::Nothing {
-                        completed = false;
-                    }
-
-                    current.connects(&TilePixel::City)
-                },
-            );
-
-            if completed {
-                // TODO: Odmagicnumberować
-                score += 3;
-            }
-        }
-
-        score
-    }
-
-    fn get_structure_score(&self, tiles: &HashSet<Index>, in_game: bool) -> u32 {
-        let scoring_places = tiles.iter()
-            .map(|idx| (self.map[*idx], index_place(idx)))
-            .unique();
-
-        scoring_places
-            .map(|(pixel, place)| {
-                match pixel {
-                    TilePixel::Road | TilePixel::City | TilePixel::PennantCity => 
-                        pixel.score(in_game),
-                    TilePixel::Cloister => {
-                        let score = self.neighbour_count(&place) + 1;
-                        score
-                    },
-                    _ => 0,
-                }
-            })
-            .sum()
     }
 
     fn score_structure(&mut self, structure: &Structure) {

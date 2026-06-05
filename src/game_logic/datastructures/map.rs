@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, fmt::{Display, Error}, iter, ops::{Index as IndexTrait, IndexMut}};
+use std::{collections::HashMap, fmt::{Display, Error}, iter, ops::{Index as IndexTrait, IndexMut}};
 use std::fmt::Write;
 
 use itertools::Itertools;

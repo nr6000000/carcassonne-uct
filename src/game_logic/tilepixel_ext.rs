@@ -1,4 +1,4 @@
-use tileset_format::{TILE_SIZE, TilePixel::{self, Blockade, City, Cloister, Field, Nothing, PennantCity, Road}};
+use tileset_format::{TilePixel::{self, Blockade, City, Cloister, Field, Nothing, PennantCity, Road}};
 
 pub trait TilePixelExt {
     /// Whether two tiles can be placed next to each other
