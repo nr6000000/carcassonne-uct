@@ -2,13 +2,16 @@ use std::{collections::{HashMap, HashSet}, fmt::{Display, Error}, iter, ops::{In
 use std::fmt::Write;
 
 use itertools::Itertools;
+use tileset_format::TILE_SIZE;
 use crate::game_logic::{datastructures::index::Index, game::PlayerId};
 
 const GROWTH_FACTOR: usize = 2;
 
+#[derive(Clone)]
 pub struct Map<T> {
     data: Vec<T>,
     size: usize,
+    default: T,
 }
 
 impl<T: Default + Copy> Map<T> {
@@ -19,6 +22,7 @@ impl<T: Default + Copy> Map<T> {
         Self { 
             data,
             size,
+            default: T::default(),
         }
     }
 
@@ -129,11 +133,11 @@ impl<T> Map<T> {
     }
 
     fn min_idx(&self) -> isize {
-        -(self.center() as isize)
+        -(self.center() as isize) + TILE_SIZE as isize
     }
 
     fn max_idx(&self) -> isize {
-        self.size as isize - self.center() as isize - 2
+        self.size as isize - self.center() as isize - 2 - TILE_SIZE as isize
     }
 
     fn flat_index(&self, row: isize, column: isize) -> usize {
