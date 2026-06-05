@@ -42,8 +42,8 @@ pub enum Rotation {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Place {
-    x: isize,
-    y: isize,
+    pub x: isize,
+    pub y: isize,
 }
 
 impl Place {
@@ -71,6 +71,8 @@ pub enum TileError {
     Disconnected,
     #[error("Ruch dla starej mapy")]
     StaleMove,
+    #[error("Nierozpoznany kafelek")]
+    BadTile,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -94,6 +96,20 @@ impl Move {
 
     pub fn get_follower(&self) -> Option<Index> {
         self.follower
+    }
+}
+
+fn place_index(place: &Place) -> Index {
+        Index {
+            x: place.x*TILE_SIZE as isize,
+            y: place.y*TILE_SIZE as isize,
+        }
+    }
+
+fn index_place(index: &Index) -> Place {
+    Place { 
+        x: index.x.div_euclid(TILE_SIZE as isize), 
+        y: index.y.div_euclid(TILE_SIZE as isize),
     }
 }
 
@@ -168,26 +184,20 @@ impl Game {
         self.followers_left.keys().copied()
     }
 
-    fn place_index(&self, place: &Place) -> Index {
-        Index {
-            x: place.x*TILE_SIZE as isize,
-            y: place.y*TILE_SIZE as isize,
-        }
+    pub fn get_score(&self) -> HashMap<PlayerId, u32> {
+        self.score.clone()
     }
 
-    fn index_place(&self, index: &Index) -> Place {
-        Place { 
-            x: index.x.div_euclid(TILE_SIZE as isize), 
-            y: index.y.div_euclid(TILE_SIZE as isize),
-        }
+    pub fn get_followers(&self) -> HashMap<PlayerId, u32> {
+        self.followers_left.clone()
     }
 
     fn place_occupied(&self, place: &Place) -> bool {
-        self.map[self.place_index(place)] != TilePixel::Nothing
+        self.map[place_index(place)] != TilePixel::Nothing
     }
 
     fn neighbour_count(&self, place: &Place) -> u32 {
-        Direction::iter()
+        OrdinalDirection::iter()
             .filter(|dir| self.place_occupied(&place.neighbour(dir.into())))
             .count() as u32
     }
@@ -281,7 +291,7 @@ impl Game {
 
         for dir in Direction::iter() {
             for i in 0..TILE_SIZE {
-                let other = self.place_index(&place.neighbour(&dir.into()));
+                let other = place_index(&place.neighbour(&dir.into()));
                 let stride = match dir {
                     Direction::North => Index{x: i as isize, y: TILE_SIZE as isize-1},
                     Direction::East => Index{x: 0, y: i as isize},
@@ -312,7 +322,7 @@ impl Game {
         rotation: Rotation,
         place: Place,
     ) {
-        let upper_left = self.place_index(&place);
+        let upper_left = place_index(&place);
 
         for y in 0..TILE_SIZE {
             for x in 0..TILE_SIZE {
@@ -322,27 +332,24 @@ impl Game {
         }
     }
 
-    fn get_structures(&self, place: &Place, in_game: bool) -> ArrayVec<Structure, 9> {
-        let index = self.place_index(place);
+    fn get_structures(&self, place: &Place, in_game: bool) -> Vec<Structure> {
+        let index = place_index(place);
 
         let tile_indices = (0..5).cartesian_product(0..5)
             .map(|(x, y)| Index{x, y} + index);
         let mut not_visited: HashSet<Index> = HashSet::from_iter(tile_indices);
 
-        let mut structures: ArrayVec<Structure, 9> = ArrayVec::new();
+        let mut structures: Vec<Structure> = Vec::new();
         while let Some(seed) = not_visited.iter().next().copied() {
             not_visited.remove(&seed);
             let seed_pixel = self.map[seed];
 
             if TilePixel::scoring_tiles().contains(&seed_pixel) {
                 let mut completed = true;
-                let mut followers_number = HashMap::new();
-                let mut followers_idx = HashSet::new();
                 let tiles = flood_fill(
                     seed, 
                     |idx| {
                         let current = self.map[idx];
-                        not_visited.remove(&idx);
 
                         // Flood fill algorithm queries for pixel that is not set
                         // which means the structure isnt fully connected
@@ -350,14 +357,19 @@ impl Game {
                             completed = false;
                         }
 
-                        if let Some(player) = self.followers.get(&idx) {
-                            *followers_number.entry(*player).or_default() += 1;
-                            followers_idx.insert(idx);
-                        }
-
                         current.connects(&seed_pixel)
                     }
                 );
+                not_visited.retain(|tile| !tiles.contains(tile));
+                
+                let mut followers_number = HashMap::new();
+                let mut followers_idx = HashSet::new();
+                let followers_iter = tiles.iter()
+                    .filter_map(|idx| self.followers.get(&idx).map(|p| (p, idx)));    
+                for (player, idx) in followers_iter {
+                    *followers_number.entry(*player).or_default() += 1;
+                    followers_idx.insert(*idx);
+                }
                 
                 let points = if seed_pixel == TilePixel::Field {
                     // Obliczanie wyniku pola przy każdym ruchu jest trochę wolne.
@@ -368,15 +380,52 @@ impl Game {
                     self.get_structure_score(&tiles, in_game)
                 };
 
+                // Real cloister completenes test
+                // TODO: Better flow - setting wrong completed and
+                // then chnaging it is confusing
+                if seed_pixel == TilePixel::Cloister {
+                    completed = points == 9;
+                }
+
                 structures.push(Structure {
                     completed,
                     points,
                     followers_number,
                     followers_idx,
                     seed,
-                }).unwrap();
+                });
             }
         }
+
+        // Add neighbouring cloisters to check if placing this tile 
+        // has completed it
+        let cloisters = OrdinalDirection::iter()
+            .map(|dir| place.neighbour(&dir))
+            .filter_map(|place| {
+                let upper_left = place_index(&place);
+                // HARDCODED: Cloisters are always in the center
+                // May not be true
+                let idx = upper_left + Index{x: 2, y: 2};
+                if self.map[idx] == TilePixel::Cloister {
+                    if self.followers.contains_key(&idx) {
+                        let score = self.get_structure_score(&HashSet::from([idx]), in_game);
+                        if score == 9 {
+                            return Some(Structure {
+                                completed: true,
+                                points: 9,
+                                followers_number: HashMap::from([
+                                    (self.followers[&idx], 1)
+                                ]),
+                                followers_idx: HashSet::from([idx]),
+                                seed: idx,
+                            })
+                        }
+                    }
+                }
+
+                None
+            });
+        structures.extend(cloisters);
 
         structures
     }
@@ -436,7 +485,7 @@ impl Game {
 
     fn get_structure_score(&self, tiles: &HashSet<Index>, in_game: bool) -> u32 {
         let scoring_places = tiles.iter()
-            .map(|idx| (self.map[*idx], self.index_place(idx)))
+            .map(|idx| (self.map[*idx], index_place(idx)))
             .unique();
 
         scoring_places
@@ -444,7 +493,10 @@ impl Game {
                 match pixel {
                     TilePixel::Road | TilePixel::City | TilePixel::PennantCity => 
                         pixel.score(in_game),
-                    TilePixel::Cloister => self.neighbour_count(&place) + 1,
+                    TilePixel::Cloister => {
+                        let score = self.neighbour_count(&place) + 1;
+                        score
+                    },
                     _ => 0,
                 }
             })
@@ -497,11 +549,53 @@ impl Game {
         Ok(())
     }
 
+    pub fn play_custom_move(
+        &mut self, 
+        place: &Place, 
+        tile: Tile,
+        follower: Option<Index>,
+        player: PlayerId,
+    ) -> Result<(), TileError> {
+        let (tile_id, rot) = 'find_tile: {
+            for (tile_id, tile_ref) in self.tiles.iter() {
+                for rot in Rotation::iter() {
+                    let mut matches = true;
+                    for (y, x) in (0..TILE_SIZE).cartesian_product(0..TILE_SIZE) {
+                        if tile[(y, x, Rotation::Rot0)] != tile_ref[(y, x, rot)] {
+                            matches = false;
+                            break;
+                        }
+                    }
+
+                    if matches {
+                        break 'find_tile Ok((tile_id, rot));
+                    }
+                }
+            }
+
+            Err(TileError::BadTile)
+        }?;
+
+        self.check_tile(&self.tiles[tile_id], place, &rot)?;
+
+        let mov = Move {
+            move_num: self.move_num,
+            place: *place,
+            tile: *tile_id,
+            rotation: rot,
+            follower: follower.map(|f| f + place_index(place)),
+            player,
+        };
+        self.play_move(mov)?;
+        
+        Ok(())
+    }
+
     pub fn end_game(&mut self) {
         let mut left_to_score: HashSet<Index> = HashSet::from_iter(self.followers.keys().copied());
         while !left_to_score.is_empty() {
             let idx = left_to_score.iter().copied().next().unwrap();
-            let structure = self.get_structures(&self.index_place(&idx), false)
+            let structure = self.get_structures(&index_place(&idx), false)
                 .into_iter()
                 .filter(|structure| structure.followers_idx.contains(&idx))
                 .next()

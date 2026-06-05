@@ -8,7 +8,7 @@ use crate::game_logic::{TilePixel, game::Rotation};
 pub struct TileId(pub u32);
 
 #[derive(Clone, Copy, Debug)]
-pub struct Tile([[TilePixel; TILE_SIZE]; TILE_SIZE]);
+pub struct Tile(pub [[TilePixel; TILE_SIZE]; TILE_SIZE]);
 
 impl Tile {
     pub const fn new(content: [[TilePixel; TILE_SIZE]; TILE_SIZE]) -> Self {
@@ -24,9 +24,9 @@ impl Index<(usize, usize, Rotation)> for Tile {
     fn index(&self, (y, x, rotation): (usize, usize, Rotation)) -> &Self::Output {
         match rotation {
             Rotation::Rot0 => &self.0[y][x],
-            Rotation::Rot1 => &self.0[x][y],
+            Rotation::Rot1 => &self.0[x][TILE_SIZE-1-y],
             Rotation::Rot2 => &self.0[TILE_SIZE-1-y][TILE_SIZE-1-x],
-            Rotation::Rot3 => &self.0[TILE_SIZE-1-x][TILE_SIZE-1-y],
+            Rotation::Rot3 => &self.0[TILE_SIZE-1-x][y],
         }
     }
 }

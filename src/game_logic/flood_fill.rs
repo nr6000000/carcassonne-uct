@@ -101,6 +101,33 @@ where
     }
 
     filled
+        // Ensure the starting pixel actually meets the condition
+    // if !inside(seed) {
+    //     return HashSet::new();
+    // }
+
+    // let mut visited = HashSet::from([seed]);
+    // let mut stack = Vec::from([seed]);
+        
+    // while !stack.is_empty() {
+    //     // Pop from the heap stack first if it's active, otherwise use the fast local stack
+    //     let current = stack.pop().unwrap();
+        
+    //     let mut check_neighbor = |idx: Index| {
+    //         if inside(idx) && !visited.contains(&idx) {
+    //             visited.insert(idx); 
+    //             stack.push(idx);
+    //         }
+    //     };
+
+    //     // Check all 4 orthogonal directions
+    //     check_neighbor(current + Index{x: 1, y: 0});
+    //     check_neighbor(current + Index{x: 0, y: 1});
+    //     check_neighbor(current + Index{x: -1, y: 0});
+    //     check_neighbor(current + Index{x: 0, y: -1});
+    // }
+
+    // visited
 }
 
 #[cfg(test)]
