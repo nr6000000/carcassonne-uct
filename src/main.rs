@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyEngine, random_engine::RandomEngine}, game_logic::{game::{Game, PlayerId}, standard_tileset::STANDARD_TILESET}};
+use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyEngine, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}};
 
 mod game_logic;
 mod engines;
 
 fn main() {
     let tileset = STANDARD_TILESET.clone();
-    let mut game = Game::new(&tileset, 2, 8);
+    let mut game = Game::new(&tileset, GameSettings::default());
 
     let random_engine = RandomEngine::new();
     let greedy_engine = GreedyEngine::new();

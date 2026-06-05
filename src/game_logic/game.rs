@@ -21,6 +21,7 @@ use crate::game_logic::tilepixel_ext::TilePixelExt;
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct PlayerId(u32);
 
+#[derive(Clone)]
 pub struct Game {
     move_num: u32,
     map: Map<TilePixel>,
@@ -30,6 +31,24 @@ pub struct Game {
     followers: HashMap<Index, PlayerId>,
     followers_left: HashMap<PlayerId, u32>,
     score: HashMap<PlayerId, u32>,
+    settings: GameSettings,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct GameSettings {
+    pub number_players: u32,
+    pub number_followers: u32,
+    pub calculate_move_score_field: bool,
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        Self { 
+            number_players: 2,
+            number_followers: 8, 
+            calculate_move_score_field: true,
+        }
+    }
 }
 
 #[derive(Debug, EnumIter, Clone, Copy)]
@@ -123,7 +142,10 @@ pub struct Structure {
 }
 
 impl Game {
-    pub fn new(tileset: &TileSet, number_players: u32, starting_followers: u32) -> Game {
+    pub fn new(
+        tileset: &TileSet, 
+        settings: GameSettings,
+    ) -> Game {
         // To support perfect circle with A tiles we need size of approx:
         // A = pi*r^2
         // r = sqrt(A/pi)
@@ -150,6 +172,8 @@ impl Game {
         }
         
         let starting_place = Place{x: 0, y: 0};
+        let number_players = settings.number_players;
+        let number_followers = settings.number_followers;
 
         let mut game = Game{
             move_num: 0,
@@ -158,12 +182,13 @@ impl Game {
             tiles_left,
             free_places: HashSet::new(),
             followers_left: HashMap::from_iter(
-                (0..number_players).map(|i| (PlayerId(i), starting_followers)),
+                (0..number_players).map(|i| (PlayerId(i), number_followers)),
             ),
             followers: HashMap::new(),
             score: HashMap::from_iter(
                 (0..number_players).map(|i| (PlayerId(i), 0)),
             ),
+            settings,
         };
 
         let starting_tile = game.tiles[&starting_tile_id.unwrap()];
@@ -375,7 +400,11 @@ impl Game {
                     // Obliczanie wyniku pola przy każdym ruchu jest trochę wolne.
                     // Jak już będziemy wiedzieli jak chcemy robić heurestyki
                     // to trzeba się będzie zastanowić jak to inteligentnie zrobić
-                    self.get_field_score(seed)
+                    if self.settings.calculate_move_score_field {
+                        self.get_field_score(seed)
+                    } else {
+                        0
+                    }
                 } else {
                     self.get_structure_score(&tiles, in_game)
                 };
@@ -627,7 +656,7 @@ mod tests {
         let tile = &Tile::new(*STANDARD_TILESET.tiles.get("CRFR").unwrap());
         let tile2 = &Tile::new(*STANDARD_TILESET.tiles.get("RRRR").unwrap());
 
-        let mut game = Game::new(&STANDARD_TILESET.clone(), 2, 8);
+        let mut game = Game::new(&STANDARD_TILESET.clone(), GameSettings::default());
         game.copy_tile(tile, Rotation::Rot0, Place { x: 0, y: 0 });
 
         assert!(game.check_tile(tile2, &Place { x: -1, y: 0 }, &Rotation::Rot0).is_ok());
@@ -638,7 +667,7 @@ mod tests {
         let tile = &Tile::new(*STANDARD_TILESET.tiles.get("CRFR").unwrap());
         let tile2 = &Tile::new(*STANDARD_TILESET.tiles.get("FFFF_CLOISTER").unwrap());
 
-        let mut game = Game::new(&STANDARD_TILESET.clone(), 2, 8);
+        let mut game = Game::new(&STANDARD_TILESET.clone(), GameSettings::default());
         game.copy_tile(tile, Rotation::Rot0, Place { x: 0, y: 0 });
 
         assert!(game.check_tile(tile2, &Place { x: 0, y: -1 }, &Rotation::Rot0).is_err());
@@ -649,7 +678,7 @@ mod tests {
         let tile = &Tile::new(*STANDARD_TILESET.tiles.get("FRFR").unwrap());
         let tile2 = &Tile::new(*STANDARD_TILESET.tiles.get("FFRR").unwrap());
 
-        let mut game = Game::new(&STANDARD_TILESET.clone(), 2, 8);
+        let mut game = Game::new(&STANDARD_TILESET.clone(), GameSettings::default());
         game.copy_tile(tile, Rotation::Rot1, Place { x: 0, y: 0 });
 
         assert!(game.check_tile(tile2, &Place { x: 0, y: -1 }, &Rotation::Rot2).is_err());

@@ -1,4 +1,4 @@
-use carcossonne_uct::game_logic::{game::{Game, Place, PlayerId}, standard_tileset::STANDARD_TILESET};
+use carcossonne_uct::game_logic::{game::{Game, GameSettings, Place, PlayerId}, standard_tileset::STANDARD_TILESET};
 
 use crate::common::play_move_pic;
 
@@ -7,7 +7,7 @@ mod common;
 #[test]
 fn score_city_split() {
     let tileset = STANDARD_TILESET.clone();
-    let mut game = Game::new(&tileset, 2, 8);
+    let mut game = Game::new(&tileset, GameSettings::default());
     
     let players_ids = game
         .get_players()
@@ -89,7 +89,7 @@ fn score_city_split() {
 #[test]
 fn score_city_nosplit() {
     let tileset = STANDARD_TILESET.clone();
-    let mut game = Game::new(&tileset, 2, 8);
+    let mut game = Game::new(&tileset, GameSettings::default());
     
     let players_ids = game
         .get_players()
