@@ -1,7 +1,8 @@
 pub mod load;
 
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
+use rapidhash::RapidHashMap;
 use serde::{Deserialize, Serialize};
 
 pub const TILE_SIZE: usize = 5;
@@ -42,6 +43,6 @@ impl Display for TilePixel {
 pub struct TileSet {
     pub name: String,
     pub starting_tile: String,
-    pub tiles: HashMap<String, [[TilePixel; TILE_SIZE]; TILE_SIZE]>,
-    pub tile_numbers: HashMap<String, u32>,
+    pub tiles: RapidHashMap<String, [[TilePixel; TILE_SIZE]; TILE_SIZE]>,
+    pub tile_numbers: RapidHashMap<String, u32>,
 }

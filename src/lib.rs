@@ -2,8 +2,7 @@ pub mod game_logic;
 pub mod engines;
 mod js_binds;
 
-use std::collections::HashMap;
-
+use rapidhash::RapidHashMap;
 use wasm_bindgen::prelude::*;
 
 use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyEngine, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}, js_binds::log::log};
@@ -27,7 +26,7 @@ fn run() -> Game {
         player2,
     ].into_iter().cycle();
 
-    let mut players = HashMap::from([
+    let mut players = RapidHashMap::from_iter([
         (player1, Box::new(random_engine) as Box<dyn CarcassonneEngine>),
         (player2, Box::new(greedy_engine)),
     ]);

@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use rand::rngs::ThreadRng;
 use rand::{RngExt};
+use rapidhash::RapidHashMap;
 
 use crate::game_logic::Index;
 use crate::game_logic::structures::Structure;
@@ -21,7 +20,7 @@ impl CarcassonneEngine for RandomEngine {
     fn play_move(
         &mut self, 
         moves: Vec<Move>, 
-        _structures: HashMap<Index, Structure>,
+        _structures: RapidHashMap<Index, Structure>,
         _player: PlayerId,
     ) -> Move {
         let idx = self.rng.random_range(0..moves.len());

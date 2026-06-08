@@ -1,5 +1,6 @@
-use std::{collections::HashMap, fmt, fs, path::Path};
+use std::{fmt, fs, path::Path};
 
+use rapidhash::RapidHashMap;
 use serde::Deserialize;
 use toml::Table;
 
@@ -71,8 +72,8 @@ pub fn parse_tilesets(path: &Path) -> Result<TileSet, ParseError> {
     let config: TileSetConfig = toml::from_str(&config_str).unwrap();
 
     let starting_tile = config.starting_tile;
-    let mut tiles: HashMap<String, [[TilePixel; TILE_SIZE]; TILE_SIZE]> = HashMap::new();
-    let mut tile_numbers: HashMap<String, u32> = HashMap::new();
+    let mut tiles: RapidHashMap<String, [[TilePixel; TILE_SIZE]; TILE_SIZE]> = RapidHashMap::default();
+    let mut tile_numbers: RapidHashMap<String, u32> = RapidHashMap::default();
 
     for (tile_name, filename) in config.tile_filenames {
         let file_path = path.join(filename.as_str().unwrap());

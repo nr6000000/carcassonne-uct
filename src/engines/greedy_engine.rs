@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
+use rapidhash::RapidHashMap;
 
 use crate::game_logic::Index;
 use crate::game_logic::structures::Structure;
@@ -28,7 +27,7 @@ impl CarcassonneEngine for GreedyEngine {
     fn play_move(
         &mut self, 
         moves: Vec<Move>, 
-        structures: HashMap<Index, Structure>,
+        structures: RapidHashMap<Index, Structure>,
         player: PlayerId,
     ) -> Move {
         let chosen_move = moves.iter()

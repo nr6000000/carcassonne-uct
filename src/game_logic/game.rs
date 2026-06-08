@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
 use std::f32::consts::PI;
 use std::fmt::Display;
 
 use heapless::{Vec as ArrayVec};
 use itertools::Itertools;
+use rapidhash::{RapidHashMap, RapidHashSet};
 use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
 use tileset_format::{TILE_SIZE, TileSet};
@@ -24,12 +24,12 @@ pub struct PlayerId(u32);
 pub struct Game {
     pub(crate) move_num: u32,
     pub(crate) map: Map<TilePixel>,
-    pub(crate) tiles: HashMap<TileId, Tile>,
+    pub(crate) tiles: RapidHashMap<TileId, Tile>,
     pub(crate) tiles_left: MultiHashSet<TileId>,
-    pub(crate) free_places: HashSet<Place>,
-    pub(crate) followers: HashMap<Index, PlayerId>,
-    pub(crate) followers_left: HashMap<PlayerId, u32>,
-    pub(crate) score: HashMap<PlayerId, u32>,
+    pub(crate) free_places: RapidHashSet<Place>,
+    pub(crate) followers: RapidHashMap<Index, PlayerId>,
+    pub(crate) followers_left: RapidHashMap<PlayerId, u32>,
+    pub(crate) score: RapidHashMap<PlayerId, u32>,
     pub(crate) settings: GameSettings,
 }
 
@@ -146,7 +146,7 @@ impl Game {
         let tileset_size = tileset.tiles.iter().count() as f32;
         let init_map_size = (tileset_size/PI).sqrt().ceil() as usize * 8 * TILE_SIZE;
 
-        let mut tiles: HashMap<TileId, Tile> = HashMap::new();
+        let mut tiles: RapidHashMap<TileId, Tile> = RapidHashMap::default();
         let mut tiles_left: MultiHashSet<TileId> = MultiHashSet::new();
         let mut starting_tile_id: Option<TileId> = None;
 
@@ -170,12 +170,12 @@ impl Game {
             map: Map::new(init_map_size),
             tiles,
             tiles_left,
-            free_places: HashSet::new(),
-            followers_left: HashMap::from_iter(
+            free_places: RapidHashSet::default(),
+            followers_left: RapidHashMap::from_iter(
                 (0..number_players).map(|i| (PlayerId(i), number_followers)),
             ),
-            followers: HashMap::new(),
-            score: HashMap::from_iter(
+            followers: RapidHashMap::default(),
+            score: RapidHashMap::from_iter(
                 (0..number_players).map(|i| (PlayerId(i), 0)),
             ),
             settings,
@@ -199,11 +199,11 @@ impl Game {
         self.followers_left.keys().copied()
     }
 
-    pub fn get_score(&self) -> HashMap<PlayerId, u32> {
+    pub fn get_score(&self) -> RapidHashMap<PlayerId, u32> {
         self.score.clone()
     }
 
-    pub fn get_followers(&self) -> HashMap<PlayerId, u32> {
+    pub fn get_followers(&self) -> RapidHashMap<PlayerId, u32> {
         self.followers_left.clone()
     }
 
@@ -251,8 +251,8 @@ impl Game {
     fn get_moves_structures(
         &mut self, 
         moves: Vec<Move>
-    ) -> (Vec<Move>, HashMap<Index, Structure>) {
-        let (mut moves_with_followers, structures): (Vec<Move>, HashMap<Index, Structure>) = moves
+    ) -> (Vec<Move>, RapidHashMap<Index, Structure>) {
+        let (mut moves_with_followers, structures): (Vec<Move>, RapidHashMap<Index, Structure>) = moves
             .clone()
             .into_iter()
             .flat_map(|mov| {
@@ -285,7 +285,7 @@ impl Game {
     pub fn get_moves(
         &mut self, 
         player: PlayerId
-    ) -> (Vec<Move>, HashMap<Index, Structure>) {
+    ) -> (Vec<Move>, RapidHashMap<Index, Structure>) {
         let moves = self.get_moves_placement(player);
         self.get_moves_structures(moves)
     }
@@ -436,7 +436,7 @@ impl Game {
     }
 
     pub fn end_game(&mut self) {
-        let mut left_to_score: HashSet<Index> = HashSet::from_iter(self.followers.keys().copied());
+        let mut left_to_score: RapidHashSet<Index> = RapidHashSet::from_iter(self.followers.keys().copied());
         while !left_to_score.is_empty() {
             let idx = left_to_score.iter().copied().next().unwrap();
             let structure = self.get_structures(&index_place(&idx), false)
