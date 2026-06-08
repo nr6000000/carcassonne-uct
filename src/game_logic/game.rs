@@ -3,10 +3,12 @@ use std::fmt::Display;
 
 use heapless::{Vec as ArrayVec};
 use itertools::Itertools;
+use rand::rngs::ThreadRng;
 use rapidhash::{RapidHashMap, RapidHashSet};
 use strum::{EnumIter, IntoEnumIterator};
 use thiserror::Error;
 use tileset_format::{TILE_SIZE, TileSet};
+use rand::seq::{IndexedRandom, IteratorRandom};
 
 use crate::game_logic::TilePixel;
 use crate::game_logic::datastructures::direction::{Direction, OrdinalDirection};
@@ -31,6 +33,7 @@ pub struct Game {
     pub(crate) followers_left: RapidHashMap<PlayerId, u32>,
     pub(crate) score: RapidHashMap<PlayerId, u32>,
     pub(crate) settings: GameSettings,
+    rng: ThreadRng,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -179,6 +182,7 @@ impl Game {
                 (0..number_players).map(|i| (PlayerId(i), 0)),
             ),
             settings,
+            rng: rand::rng(),
         };
 
         let starting_tile = game.tiles[&starting_tile_id.unwrap()];
@@ -205,6 +209,10 @@ impl Game {
 
     pub fn get_followers(&self) -> RapidHashMap<PlayerId, u32> {
         self.followers_left.clone()
+    }
+
+    pub fn get_tiles_left(&self) -> usize {
+        self.tiles_left.len()
     }
 
     fn place_occupied(&self, place: &Place) -> bool {
@@ -288,6 +296,42 @@ impl Game {
     ) -> (Vec<Move>, RapidHashMap<Index, Structure>) {
         let moves = self.get_moves_placement(player);
         self.get_moves_structures(moves)
+    }
+
+    pub fn get_random_move(&mut self, player: PlayerId) -> Option<Move> {
+        let places = self.free_places.iter()
+            .sample(&mut self.rng, self.free_places.len());
+
+        let tile_ids = self.tiles_left.iter()
+            .sample(&mut self.rng, self.tiles_left.len());
+
+        let sampled_move = 'sample_move: {
+            for place in places {
+                for &tile_id in &tile_ids {
+                    let tile = self.tiles[tile_id];
+                    for rotation in Rotation::iter() {
+                        if self.check_tile(&tile, place, &rotation).is_ok() {
+                            break 'sample_move Some(Move {
+                                move_num: self.move_num,
+                                place: *place,
+                                tile: *tile_id,
+                                rotation,
+                                follower: None,
+                                player,
+                            })
+                        }
+                    }
+                }
+            }
+            None
+        };
+
+        if let Some(mov) = sampled_move {
+            let (moves, _) = self.get_moves_structures(vec![mov]);
+            Some(*moves.choose(&mut self.rng).unwrap())
+        } else {
+            sampled_move
+        }
     }
 
     fn check_tile(

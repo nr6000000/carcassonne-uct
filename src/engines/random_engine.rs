@@ -3,6 +3,7 @@ use rand::{RngExt};
 use rapidhash::RapidHashMap;
 
 use crate::game_logic::Index;
+use crate::game_logic::game::Game;
 use crate::game_logic::structures::Structure;
 use crate::{engines::carcassonne_engine::CarcassonneEngine, game_logic::game::{Move, PlayerId}};
 
@@ -19,12 +20,9 @@ impl RandomEngine {
 impl CarcassonneEngine for RandomEngine {
     fn play_move(
         &mut self, 
-        moves: Vec<Move>, 
-        _structures: RapidHashMap<Index, Structure>,
-        _player: PlayerId,
+        game: &mut Game,
+        player: PlayerId,
     ) -> Move {
-        let idx = self.rng.random_range(0..moves.len());
-        let chosen_move = moves.get(idx).unwrap();
-        *chosen_move
+        game.get_random_move(player).unwrap()
     }
 }

@@ -33,16 +33,16 @@ fn run() -> Game {
 
     loop {
         let current_player = current_player_gen.next().unwrap();
-        let (moves, structures) = game.get_moves(*current_player); 
-        if moves.len() == 0 {
-            break;
-        }
 
         let chosen_move = players.get_mut(current_player).unwrap()
-            .play_move(moves, structures, *current_player);
+            .play_move(&mut game, *current_player);
 
         game.play_move(chosen_move)
             .unwrap_or_else(|err| panic!("Bład gry: {}", err));
+
+        if game.tiles_left.len() == 0 {
+            break;
+        }
     }   
 
     game.end_game();

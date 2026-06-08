@@ -69,4 +69,8 @@ impl<T: Eq + Hash + Copy> MultiHashSet<T> {
     pub fn len(&self) -> usize {
         self.elements.len()
     }
+
+    pub fn iter(&self) -> impl Iterator<Item=&T> {
+        self.elements.keys()
+    }
 }
