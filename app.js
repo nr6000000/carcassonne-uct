@@ -286,7 +286,7 @@ function rotateTile() {
     if (!gameState.selectedTile) return;
 
     gameState.rotation = (gameState.rotation + 1) % 4;
-    const degrees = gameState.rotation * 90;
+    const degrees = ((4 - gameState.rotation) % 4) * 90;
     dom.previewImage.style.transform = `rotate(${degrees}deg)`;
     dom.rotationLabel.textContent = `${degrees}°`;
 
@@ -330,7 +330,7 @@ function createTileElement(tile) {
     const img = document.createElement("img");
     img.src = `${TILE_IMAGES_DIR}/${tile.tile_name}.png`;
     img.alt = tile.tile_name;
-    img.style.transform = `rotate(${tile.rotation * 90}deg)`;
+    img.style.transform = `rotate(${((4 - tile.rotation) % 4) * 90}deg)`;
     img.draggable = false;
     el.appendChild(img);
 
@@ -405,7 +405,7 @@ function showValidPlacements() {
         const previewImg = document.createElement("img");
         previewImg.className = "tile-preview";
         previewImg.src = `${TILE_IMAGES_DIR}/${gameState.selectedTile}.png`;
-        previewImg.style.transform = `rotate(${gameState.rotation * 90}deg)`;
+        previewImg.style.transform = `rotate(${((4 - gameState.rotation) % 4) * 90}deg)`;
         previewImg.draggable = false;
         marker.appendChild(previewImg);
 
