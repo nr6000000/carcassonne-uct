@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-
-use crate::game_logic::{Index, game::{Move, PlayerId}, structures::Structure};
+use crate::game_logic::{game::{Game, Move, PlayerId}};
 
 pub trait CarcassonneEngine {
     fn play_move(
         &mut self, 
-        moves: Vec<Move>,
-        structures: HashMap<Index, Structure>,
+        game: &mut Game,
         player: PlayerId,
     ) -> Move;
 }

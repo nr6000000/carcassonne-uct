@@ -1,12 +1,13 @@
 use std::collections::hash_map::Keys;
-use std::collections::{HashMap};
 use std::fmt::{Debug};
 use std::hash::Hash;
 use core::convert::From;
 
+use rapidhash::RapidHashMap;
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MultiHashSet<T: Eq + Hash> {
-    elements: HashMap<T, u32>
+    elements: RapidHashMap<T, u32>
 }
 
 impl<T: Eq + Hash + Copy> Extend<T> for MultiHashSet<T> {
@@ -43,7 +44,7 @@ impl<T: Eq + Hash + Copy, const N: usize> From<[T;N]> for MultiHashSet<T> {
 
 impl<T: Eq + Hash + Copy> MultiHashSet<T> {
     pub fn new() -> MultiHashSet<T> {
-        MultiHashSet { elements: HashMap::new() }
+        MultiHashSet { elements: RapidHashMap::default() }
     }
 
     pub fn set(&mut self, k: T, v: u32) {
@@ -67,5 +68,9 @@ impl<T: Eq + Hash + Copy> MultiHashSet<T> {
 
     pub fn len(&self) -> usize {
         self.elements.len()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item=&T> {
+        self.elements.keys()
     }
 }

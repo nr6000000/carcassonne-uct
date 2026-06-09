@@ -1,7 +1,8 @@
-use std::{collections::HashMap, fmt::{Display, Error}, iter, ops::{Index as IndexTrait, IndexMut}};
+use std::{fmt::{Display, Error}, iter, ops::{Index as IndexTrait, IndexMut}};
 use std::fmt::Write;
 
 use itertools::Itertools;
+use rapidhash::RapidHashMap;
 use tileset_format::TILE_SIZE;
 use crate::game_logic::{datastructures::index::Index, game::PlayerId};
 
@@ -11,7 +12,6 @@ const GROWTH_FACTOR: usize = 2;
 pub struct Map<T> {
     data: Vec<T>,
     size: usize,
-    default: T,
 }
 
 impl<T: Default + Copy> Map<T> {
@@ -22,7 +22,6 @@ impl<T: Default + Copy> Map<T> {
         Self { 
             data,
             size,
-            default: T::default(),
         }
     }
 
@@ -78,7 +77,7 @@ impl<T: Default + Copy> Map<T> {
 impl<T: Default + Eq + Display> Map<T> {
     pub fn to_display_string(
         &self, 
-        followers: Option<&HashMap<Index, PlayerId>>,
+        followers: Option<&RapidHashMap<Index, PlayerId>>,
     ) -> Result<String, Error> {
         let mut buf = String::new();
 
