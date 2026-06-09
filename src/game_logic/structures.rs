@@ -27,7 +27,7 @@ impl Game {
             not_visited.remove(&seed);
             let seed_pixel = self.map[seed];
 
-            if TilePixel::scoring_tiles().contains(&seed_pixel) {
+            if TilePixel::scoring_tiles(&self.settings).contains(&seed_pixel) {
                 let mut completed = true;
                 let tiles = flood_fill(
                     seed, 

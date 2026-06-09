@@ -41,6 +41,7 @@ pub struct GameSettings {
     pub number_players: u32,
     pub number_followers: u32,
     pub calculate_move_score_field: bool,
+    pub farmers_enabled: bool,
 }
 
 impl Default for GameSettings {
@@ -49,6 +50,7 @@ impl Default for GameSettings {
             number_players: 2,
             number_followers: 8, 
             calculate_move_score_field: true,
+            farmers_enabled: true,
         }
     }
 }

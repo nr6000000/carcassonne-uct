@@ -1,5 +1,7 @@
 use tileset_format::{TilePixel::{self, Blockade, City, Cloister, Field, Nothing, PennantCity, Road}};
 
+use crate::game_logic::game::GameSettings;
+
 pub trait TilePixelExt {
     /// Whether two tiles can be placed next to each other
     /// if they have edges with these pixels.
@@ -12,11 +14,18 @@ pub trait TilePixelExt {
     fn score(&self, in_game: bool) -> u32;
 
     /// TilePixels that form scoring structures 
-    fn scoring_tiles() -> &'static[TilePixel];
+    fn scoring_tiles(settings: &GameSettings) -> &'static[TilePixel];
 }
 
 const SCORING_TILES: [TilePixel; 5] = [
     Field,
+    Road,
+    Cloister,
+    City,
+    PennantCity,
+];
+
+const SCORING_TILES_NOFIELDS: [TilePixel; 4] = [
     Road,
     Cloister,
     City,
@@ -58,7 +67,11 @@ impl TilePixelExt for TilePixel {
         }
     }
     
-    fn scoring_tiles() -> &'static[TilePixel] {
-        &SCORING_TILES
+    fn scoring_tiles(settings: &GameSettings) -> &'static[TilePixel] {
+        if settings.farmers_enabled {
+            &SCORING_TILES
+        } else {
+            &SCORING_TILES_NOFIELDS
+        }
     }
 }

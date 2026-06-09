@@ -7,7 +7,9 @@ mod engines;
 
 fn main() {
     let tileset = STANDARD_TILESET.clone();
-    let mut game = Game::new(&tileset, GameSettings::default());
+    let mut settings = GameSettings::default();
+    settings.farmers_enabled = false;
+    let mut game = Game::new(&tileset, settings);
 
     let random_engine = RandomEngine::new();
     let greedy_engine = GreedyEngine::new();
