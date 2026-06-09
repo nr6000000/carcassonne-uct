@@ -285,7 +285,7 @@ function selectTile(tileName) {
 function rotateTile() {
     if (!gameState.selectedTile) return;
 
-    gameState.rotation = (gameState.rotation + 1) % 4;
+    gameState.rotation = (gameState.rotation + 3) % 4;
     const degrees = ((4 - gameState.rotation) % 4) * 90;
     dom.previewImage.style.transform = `rotate(${degrees}deg)`;
     dom.rotationLabel.textContent = `${degrees}°`;
