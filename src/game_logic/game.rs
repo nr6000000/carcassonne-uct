@@ -18,7 +18,7 @@ use crate::game_logic::tile::{NOTHING_TILE, Tile, TileId};
 use crate::game_logic::tilepixel_ext::TilePixelExt;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct PlayerId(u32);
+pub struct PlayerId(pub(crate) u32);
 
 #[derive(Clone)]
 pub struct Game {
@@ -95,12 +95,12 @@ pub enum TileError {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Move {
-    move_num: u32,
-    place: Place,
-    tile: TileId,
-    rotation: Rotation,
-    follower: Option<Index>,
-    player: PlayerId,
+    pub(crate) move_num: u32,
+    pub(crate) place: Place,
+    pub(crate) tile: TileId,
+    pub(crate) rotation: Rotation,
+    pub(crate) follower: Option<Index>,
+    pub(crate) player: PlayerId,
 }
 
 impl Move {
@@ -114,6 +114,18 @@ impl Move {
 
     pub fn get_follower(&self) -> Option<Index> {
         self.follower
+    }
+
+    pub fn get_tile(&self) -> TileId {
+        self.tile
+    }
+
+    pub fn get_rotation(&self) -> Rotation {
+        self.rotation
+    }
+
+    pub fn get_player(&self) -> PlayerId {
+        self.player
     }
 }
 
@@ -290,7 +302,7 @@ impl Game {
         self.get_moves_structures(moves)
     }
 
-    fn check_tile(
+    pub(crate) fn check_tile(
         &self, 
         tile: &Tile, 
         place: &Place,
@@ -331,7 +343,7 @@ impl Game {
         Ok(())
     }
 
-    fn copy_tile(
+    pub(crate) fn copy_tile(
         &mut self, 
         tile: &Tile, 
         rotation: Rotation,

@@ -1,16 +1,128 @@
 <!doctype html>
-<html lang="en-US">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>hello-wasm example</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Play Carcassonne board game against an AI bot in your browser. Place tiles, build cities and roads, and compete for the highest score." />
+    <title>Carcassonne — Play vs Bot</title>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <script type="module">
-      import init, { wasm_test_main } from "./pkg/carcossonne_uct.js";
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+      <span class="loading-text">Loading Carcassonne…</span>
+    </div>
 
-      init().then(() => {
-        wasm_test_main();
-      });
-    </script>
+    <!-- Main Menu -->
+    <div id="main-menu">
+      <h1 class="menu-title">Carcassonne</h1>
+      <p class="menu-subtitle">The Medieval Tile-Laying Game</p>
+      <div class="menu-buttons">
+        <button id="btn-play-bot" class="menu-btn primary">
+          <span class="btn-label">⚔️ Play vs Bot</span>
+          <span class="btn-sublabel">Challenge the Greedy AI</span>
+        </button>
+        <button class="menu-btn disabled">
+          <span class="btn-label">👥 2 Player Mode</span>
+          <span class="btn-sublabel">Coming soon</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen">
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div class="top-bar-title">Carcassonne</div>
+        <div class="scores-display">
+          <div class="score-item" id="score-human">
+            <span class="score-dot human"></span>
+            <span class="score-label">You</span>
+            <span class="score-value" id="score-human-value">0</span>
+            <span class="follower-count" id="followers-human">🧍×7</span>
+          </div>
+          <div class="turn-indicator" id="turn-indicator">Your Turn</div>
+          <div class="score-item" id="score-bot">
+            <span class="score-dot bot"></span>
+            <span class="score-label">Bot</span>
+            <span class="score-value" id="score-bot-value">0</span>
+            <span class="follower-count" id="followers-bot">🧍×7</span>
+          </div>
+        </div>
+        <div style="width: 120px;"></div>
+      </div>
+
+      <!-- Board Area -->
+      <div class="board-container" id="board-container">
+        <div class="board-wrapper" id="board-wrapper">
+          <!-- Tiles and markers placed dynamically -->
+        </div>
+
+        <!-- Bot Thinking Overlay -->
+        <div class="bot-thinking-overlay" id="bot-thinking">
+          <div class="bot-thinking-card">
+            <div class="spinner"></div>
+            <p>Bot is thinking…</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Selected Tile Preview -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-title">Selected Tile</div>
+          <div class="selected-tile-preview">
+            <div class="preview-image-container" id="preview-container">
+              <span class="preview-placeholder" id="preview-placeholder">Select a tile below</span>
+              <img id="preview-image" src="" alt="Selected tile" style="display:none;" />
+            </div>
+            <div class="preview-controls">
+              <button class="rotate-btn" id="btn-rotate" style="display:none;">
+                🔄 Rotate
+              </button>
+              <span class="rotation-label" id="rotation-label"></span>
+              <button class="skip-meeple-btn" id="btn-skip-meeple">
+                Skip Meeple
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Available Tiles -->
+        <div class="sidebar-section" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+          <div class="sidebar-section-title">Available Tiles</div>
+          <div class="tile-grid" id="tile-grid">
+            <!-- Tile cards populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+          <div class="status-message" id="status-message">Loading game…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal">
+      <div class="game-over-card">
+        <div class="winner-crown" id="winner-crown">👑</div>
+        <h2 id="game-over-title">Game Over</h2>
+        <div class="final-scores">
+          <div class="final-score-item human">
+            <div class="label">You</div>
+            <div class="value" id="final-human-score">0</div>
+          </div>
+          <div class="final-score-item bot">
+            <div class="label">Bot</div>
+            <div class="value" id="final-bot-score">0</div>
+          </div>
+        </div>
+        <button class="play-again-btn" id="btn-play-again">Play Again</button>
+      </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
   </body>
 </html>

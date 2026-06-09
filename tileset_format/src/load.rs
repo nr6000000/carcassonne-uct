@@ -58,9 +58,13 @@ fn parse_tile(path: &Path) -> Result<[[TilePixel; TILE_SIZE]; TILE_SIZE], ParseE
             }
         }
 
-        data_iter.next()
-            .filter(|c| *c == '\n')
-            .ok_or(ParseError::new(&path))?;
+        let mut next_char = data_iter.next().ok_or(ParseError::new(&path))?;
+        if next_char == '\r' {
+            next_char = data_iter.next().ok_or(ParseError::new(&path))?;
+        }
+        if next_char != '\n' {
+            return Err(ParseError::new(&path));
+        }
     }
 
     Ok(pixels)

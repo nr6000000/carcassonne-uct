@@ -83,6 +83,7 @@ dependencies = [
  "postcard",
  "rand",
  "serde",
+ "serde_json",
  "strum",
  "thiserror",
  "tileset_format",
