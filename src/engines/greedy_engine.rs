@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-
 use itertools::Itertools;
+use rapidhash::RapidHashMap;
 
 use crate::game_logic::Index;
+use crate::game_logic::game::Game;
 use crate::game_logic::structures::Structure;
 use crate::{engines::carcassonne_engine::CarcassonneEngine, game_logic::game::{Move, PlayerId}};
 
@@ -27,10 +27,10 @@ fn get_points(structure: &Structure, player: PlayerId) -> u32 {
 impl CarcassonneEngine for GreedyEngine {
     fn play_move(
         &mut self, 
-        moves: Vec<Move>, 
-        structures: HashMap<Index, Structure>,
+        game: &mut Game,
         player: PlayerId,
     ) -> Move {
+        let (moves, structures) = game.get_moves(player);
         let chosen_move = moves.iter()
             .max_by_key(|mov| mov.get_follower()
                 .map(|idx| get_points(&structures[&idx], player))

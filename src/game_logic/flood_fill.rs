@@ -1,4 +1,4 @@
-use std::{collections::HashSet};
+use rapidhash::RapidHashSet;
 
 use crate::game_logic::datastructures::index::Index;
 
@@ -15,11 +15,11 @@ use crate::game_logic::datastructures::index::Index;
 pub fn flood_fill<F>(
     seed: Index,
     mut inside: F, 
-) -> HashSet<Index> 
+) -> RapidHashSet<Index> 
 where
     F: FnMut(Index) -> bool,
 {
-    let mut filled = HashSet::new();
+    let mut filled = RapidHashSet::default();
     
     // If the seed itself doesn't satisfy the predicate, return early
     if !inside(seed) {
@@ -154,7 +154,7 @@ mod tests {
             |idx| grid[idx.y as usize][idx.x as usize] == 0,
         );
 
-        let expected = HashSet::from([
+        let expected = RapidHashSet::from_iter([
             Index {x: 1, y: 1},
             Index {x: 2, y: 1},
             Index {x: 3, y: 1},
@@ -208,7 +208,7 @@ mod tests {
             |idx| grid[idx.y as usize][idx.x as usize] == 0,
         );
 
-        let expected = HashSet::from([
+        let expected = RapidHashSet::from_iter([
             Index {x: 1, y: 1},
             Index {x: 1, y: 2},
             Index {x: 1, y: 3},

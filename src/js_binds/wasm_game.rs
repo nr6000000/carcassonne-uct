@@ -131,7 +131,7 @@ pub struct WasmGame {
     tile_id_to_name: HashMap<TileId, String>,
     placed_tiles: Vec<PlacedTileRecord>,
     cached_moves: Vec<Move>,
-    cached_structures: HashMap<Index, crate::game_logic::structures::Structure>,
+    cached_structures: rapidhash::RapidHashMap<Index, crate::game_logic::structures::Structure>,
     human_player: PlayerId,
     bot_player: PlayerId,
     greedy_engine: GreedyEngine,
@@ -183,7 +183,7 @@ impl WasmGame {
             tile_id_to_name,
             placed_tiles: vec![starting_tile_record],
             cached_moves: vec![],
-            cached_structures: HashMap::new(),
+            cached_structures: rapidhash::RapidHashMap::default(),
             human_player: PlayerId(0),
             bot_player: PlayerId(1),
             greedy_engine: GreedyEngine::new(),
@@ -406,7 +406,7 @@ impl WasmGame {
             .unwrap();
         }
 
-        let chosen_move = self.greedy_engine.play_move(moves, structures, self.bot_player);
+        let chosen_move = self.greedy_engine.play_move(&mut self.game, self.bot_player);
 
         let tile_name = self.tile_id_to_name
             .get(&chosen_move.tile)

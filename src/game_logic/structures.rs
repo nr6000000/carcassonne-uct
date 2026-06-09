@@ -1,6 +1,5 @@
-use std::collections::{HashMap, HashSet};
-
 use itertools::Itertools;
+use rapidhash::{RapidHashMap, RapidHashSet};
 use strum::IntoEnumIterator;
 use tileset_format::TilePixel;
 
@@ -10,8 +9,8 @@ use crate::game_logic::{Index, datastructures::direction::OrdinalDirection, floo
 pub struct Structure {
     pub completed: bool,
     pub points: u32,
-    pub followers_number: HashMap<PlayerId, u32>,
-    pub followers_idx: HashSet<Index>,
+    pub followers_number: RapidHashMap<PlayerId, u32>,
+    pub followers_idx: RapidHashSet<Index>,
     pub seed: Index,
 }
 
@@ -21,7 +20,7 @@ impl Game {
 
         let tile_indices = (0..5).cartesian_product(0..5)
             .map(|(x, y)| Index{x, y} + index);
-        let mut not_visited: HashSet<Index> = HashSet::from_iter(tile_indices);
+        let mut not_visited: RapidHashSet<Index> = RapidHashSet::from_iter(tile_indices);
 
         let mut structures: Vec<Structure> = Vec::new();
         while let Some(seed) = not_visited.iter().next().copied() {
@@ -46,8 +45,8 @@ impl Game {
                 );
                 not_visited.retain(|tile| !tiles.contains(tile));
                 
-                let mut followers_number = HashMap::new();
-                let mut followers_idx = HashSet::new();
+                let mut followers_number = RapidHashMap::default();
+                let mut followers_idx = RapidHashSet::default();
                 let followers_iter = tiles.iter()
                     .filter_map(|idx| self.followers.get(&idx).map(|p| (p, idx)));    
                 for (player, idx) in followers_iter {
@@ -96,15 +95,15 @@ impl Game {
                 let idx = upper_left + Index{x: 2, y: 2};
                 if self.map[idx] == TilePixel::Cloister {
                     if self.followers.contains_key(&idx) {
-                        let score = self.get_structure_score(&HashSet::from([idx]), in_game);
+                        let score = self.get_structure_score(&RapidHashSet::from_iter([idx]), in_game);
                         if score == 9 {
                             return Some(Structure {
                                 completed: true,
                                 points: 9,
-                                followers_number: HashMap::from([
+                                followers_number: RapidHashMap::from_iter([
                                     (self.followers[&idx], 1)
                                 ]),
-                                followers_idx: HashSet::from([idx]),
+                                followers_idx: RapidHashSet::from_iter([idx]),
                                 seed: idx,
                             })
                         }
@@ -119,9 +118,9 @@ impl Game {
     }
 
     fn get_field_score(&self, seed: Index) -> u32 {
-        let mut cities = HashSet::new();
-        let mut followers_number: HashMap<PlayerId, u32> = HashMap::new();
-        let mut followers_idx = HashSet::new();
+        let mut cities = RapidHashSet::default();
+        let mut followers_number: RapidHashMap<PlayerId, u32> = RapidHashMap::default();
+        let mut followers_idx = RapidHashSet::default();
         flood_fill(
             seed, 
             |idx| {
@@ -171,7 +170,7 @@ impl Game {
         score
     }
 
-    fn get_structure_score(&self, tiles: &HashSet<Index>, in_game: bool) -> u32 {
+    fn get_structure_score(&self, tiles: &RapidHashSet<Index>, in_game: bool) -> u32 {
         let scoring_places = tiles.iter()
             .map(|idx| (self.map[*idx], index_place(idx)))
             .unique();
