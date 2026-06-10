@@ -144,7 +144,9 @@ impl WasmGame {
     #[wasm_bindgen(constructor)]
     pub fn new() -> WasmGame {
         let tileset = STANDARD_TILESET.clone();
-        let game = Game::new(&tileset, GameSettings::default());
+        let mut settings = GameSettings::default();
+        settings.farmers_enabled = false;
+        let game = Game::new(&tileset, settings);
 
         let mut tile_name_to_id: HashMap<String, TileId> = HashMap::new();
         let mut tile_id_to_name: HashMap<TileId, String> = HashMap::new();
