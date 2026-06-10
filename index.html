@@ -17,10 +17,33 @@
     <div id="main-menu">
       <h1 class="menu-title">Carcassonne</h1>
       <p class="menu-subtitle">The Medieval Tile-Laying Game</p>
+      
+      <div class="menu-settings">
+        <div class="setting-group">
+          <label for="bot-depth" class="setting-label">Bot Search Depth</label>
+          <div class="select-wrapper">
+            <select id="bot-depth" class="setting-select">
+              <option value="1" selected>1 (Fastest)</option>
+              <option value="2">2 (Fast)</option>
+              <option value="3">3 (Medium)</option>
+              <option value="4">4 (Slow)</option>
+              <option value="5">5 (Slowest)</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-group checkbox-group">
+          <label for="plain-mode" class="setting-checkbox-label">
+            <input type="checkbox" id="plain-mode" class="setting-checkbox" />
+            <span class="checkbox-custom"></span>
+            Plain Mode (Roads only)
+          </label>
+        </div>
+      </div>
+
       <div class="menu-buttons">
         <button id="btn-play-bot" class="menu-btn primary">
           <span class="btn-label">⚔️ Play vs Bot</span>
-          <span class="btn-sublabel">Challenge the Greedy AI</span>
+          <span class="btn-sublabel">Challenge the AI</span>
         </button>
         <button class="menu-btn disabled">
           <span class="btn-label">👥 2 Player Mode</span>

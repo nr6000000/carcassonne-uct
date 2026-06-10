@@ -52,6 +52,8 @@ function cacheDom() {
     dom.mainMenu = document.getElementById("main-menu");
     dom.gameScreen = document.getElementById("game-screen");
     dom.btnPlayBot = document.getElementById("btn-play-bot");
+    dom.botDepthSelect = document.getElementById("bot-depth");
+    dom.plainModeCheckbox = document.getElementById("plain-mode");
     dom.boardContainer = document.getElementById("board-container");
     dom.boardWrapper = document.getElementById("board-wrapper");
     dom.tileGrid = document.getElementById("tile-grid");
@@ -109,7 +111,9 @@ function setupEventListeners() {
 // ─── Game Lifecycle ──────────────────────────────────────────────────────────
 
 function startGame() {
-    wasmGame = new WasmGame();
+    const plainMode = dom.plainModeCheckbox ? dom.plainModeCheckbox.checked : false;
+    const botDepth = dom.botDepthSelect ? parseInt(dom.botDepthSelect.value, 10) : 1;
+    wasmGame = new WasmGame(plainMode, botDepth);
     gameState = {
         selectedTile: null,
         rotation: 0,

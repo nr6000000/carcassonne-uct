@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 use tileset_format::TILE_SIZE;
 
 use crate::engines::carcassonne_engine::CarcassonneEngine;
-use crate::engines::greedy_engine::GreedyEngine;
+use crate::engines::minimax_engine::MinimaxEngine;
 use crate::game_logic::game::{
     Game, GameSettings, Move, Place, PlayerId, place_index,
 };
@@ -134,7 +134,7 @@ pub struct WasmGame {
     cached_structures: rapidhash::RapidHashMap<Index, crate::game_logic::structures::Structure>,
     human_player: PlayerId,
     bot_player: PlayerId,
-    greedy_engine: GreedyEngine,
+    bot_engine: MinimaxEngine,
     // Track tile name -> remaining count from tileset
     tile_name_to_count: HashMap<String, u32>,
 }
@@ -142,8 +142,25 @@ pub struct WasmGame {
 #[wasm_bindgen]
 impl WasmGame {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> WasmGame {
-        let tileset = STANDARD_TILESET.clone();
+    pub fn new(plain_mode: bool, bot_depth: u32) -> WasmGame {
+        let mut tileset = STANDARD_TILESET.clone();
+        
+        if plain_mode {
+            let keep = vec!["CRFR", "FFRR", "FRRR_DISCONNECTED"];
+            tileset.tiles.retain(|k, _| keep.contains(&k.as_str()));
+            tileset.tile_numbers.retain(|k, _| keep.contains(&k.as_str()));
+            
+            if let Some(c) = tileset.tile_numbers.get_mut("CRFR") {
+                *c = 0;
+            }
+            if let Some(c) = tileset.tile_numbers.get_mut("FFRR") {
+                *c = 36;
+            }
+            if let Some(c) = tileset.tile_numbers.get_mut("FRRR_DISCONNECTED") {
+                *c = 36;
+            }
+        }
+        
         let game = Game::new(&tileset, GameSettings::default());
 
         let mut tile_name_to_id: HashMap<String, TileId> = HashMap::new();
@@ -186,9 +203,13 @@ impl WasmGame {
             cached_structures: rapidhash::RapidHashMap::default(),
             human_player: PlayerId(0),
             bot_player: PlayerId(1),
-            greedy_engine: GreedyEngine::new(),
+            bot_engine: MinimaxEngine::new(bot_depth),
             tile_name_to_count,
         }
+    }
+
+    pub fn set_bot_depth(&mut self, depth: u32) {
+        self.bot_engine.depth = depth;
     }
 
     /// Returns starting info as JSON
@@ -406,7 +427,7 @@ impl WasmGame {
             .unwrap();
         }
 
-        let chosen_move = self.greedy_engine.play_move(&mut self.game, self.bot_player);
+        let chosen_move = self.bot_engine.play_move(&mut self.game, self.bot_player);
 
         let tile_name = self.tile_id_to_name
             .get(&chosen_move.tile)
