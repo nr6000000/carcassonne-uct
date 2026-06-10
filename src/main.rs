@@ -1,6 +1,6 @@
 use rapidhash::RapidHashMap;
 
-use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyEngine, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}};
+use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::{GreedyCompleterEngine}, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}};
 
 mod game_logic;
 mod engines;
@@ -12,7 +12,7 @@ fn main() {
     let mut game = Game::new(&tileset, settings);
 
     let random_engine = RandomEngine::new();
-    let greedy_engine = GreedyEngine::new();
+    let greedy_engine = GreedyCompleterEngine::new();
     
     let players_ids = game
         .get_players()

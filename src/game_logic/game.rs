@@ -55,7 +55,7 @@ impl Default for GameSettings {
     }
 }
 
-#[derive(Debug, EnumIter, Clone, Copy)]
+#[derive(Debug, EnumIter, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Rotation {
     Rot0 = 0,
     Rot1 = 1,
@@ -273,8 +273,9 @@ impl Game {
     fn get_moves_structures(
         &mut self, 
         moves: Vec<Move>
-    ) -> (Vec<Move>, RapidHashMap<Index, Structure>) {
-        let (mut moves_with_followers, structures): (Vec<Move>, RapidHashMap<Index, Structure>) = moves
+    ) -> (Vec<Move>, RapidHashMap<(Place, TileId, Rotation), Vec<Structure>>) {
+        let mut cached_structures = RapidHashMap::default();
+        let mut moves_with_followers: Vec<Move> = moves
             .clone()
             .into_iter()
             .flat_map(|mov| {
@@ -283,6 +284,8 @@ impl Game {
                 self.copy_tile(&tile, mov.rotation, mov.place);
                 let structures = self.get_structures(&mov.place, true);
                 self.copy_tile(&NOTHING_TILE, Rotation::Rot0, mov.place);
+
+                cached_structures.insert((mov.place, mov.tile, mov.rotation), structures.clone());
 
                 (self.followers_left[&mov.player] > 0).then(||
                     structures.into_iter()
@@ -294,20 +297,20 @@ impl Game {
             }).map(|(mov, structure)| {
                 let mut new_mov = mov.clone();
                 new_mov.follower = Some(structure.seed);
-                (new_mov, (structure.seed, structure))
-            }).unzip();
+                new_mov
+            }).collect();
         
         moves_with_followers.extend(moves);
         (
             moves_with_followers,
-            structures
+            cached_structures
         )
     }
 
     pub fn get_moves(
         &mut self, 
         player: PlayerId
-    ) -> (Vec<Move>, RapidHashMap<Index, Structure>) {
+    ) -> (Vec<Move>, RapidHashMap<(Place, TileId, Rotation), Vec<Structure>>) {
         let moves = self.get_moves_placement(player);
         self.get_moves_structures(moves)
     }

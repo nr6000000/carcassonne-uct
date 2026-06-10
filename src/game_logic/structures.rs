@@ -5,7 +5,7 @@ use tileset_format::TilePixel;
 
 use crate::game_logic::{Index, datastructures::direction::OrdinalDirection, flood_fill::flood_fill, game::{Game, Place, PlayerId, index_place, place_index}, tilepixel_ext::TilePixelExt};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Structure {
     pub completed: bool,
     pub points: u32,
