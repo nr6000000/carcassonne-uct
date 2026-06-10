@@ -5,14 +5,14 @@ mod js_binds;
 use rapidhash::RapidHashMap;
 use wasm_bindgen::prelude::*;
 
-use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyEngine, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}, js_binds::log::log};
+use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyCompleterEngine, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}, js_binds::log::log};
 
 fn run() -> Game {
     let tileset = STANDARD_TILESET.clone();
     let mut game = Game::new(&tileset, GameSettings::default());
 
     let random_engine = RandomEngine::new();
-    let greedy_engine = GreedyEngine::new();
+    let greedy_engine = GreedyCompleterEngine::new();
     
     let players_ids = game
         .get_players()

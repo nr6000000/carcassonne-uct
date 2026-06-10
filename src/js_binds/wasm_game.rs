@@ -6,8 +6,9 @@ use tileset_format::TILE_SIZE;
 
 use crate::engines::carcassonne_engine::CarcassonneEngine;
 use crate::engines::minimax_engine::MinimaxEngine;
+use crate::engines::greedy_engine::GreedyCompleterEngine;
 use crate::game_logic::game::{
-    Game, GameSettings, Move, Place, PlayerId, place_index,
+    Game, GameSettings, Move, Place, PlayerId, Rotation, place_index
 };
 use crate::game_logic::standard_tileset::STANDARD_TILESET;
 use crate::game_logic::tile::TileId;
@@ -131,10 +132,11 @@ pub struct WasmGame {
     tile_id_to_name: HashMap<TileId, String>,
     placed_tiles: Vec<PlacedTileRecord>,
     cached_moves: Vec<Move>,
-    cached_structures: rapidhash::RapidHashMap<Index, crate::game_logic::structures::Structure>,
+    cached_structures: rapidhash::RapidHashMap<(Place, TileId, Rotation), Vec<crate::game_logic::structures::Structure>>,
     human_player: PlayerId,
     bot_player: PlayerId,
     bot_engine: MinimaxEngine,
+    greedy_engine: GreedyCompleterEngine,
     // Track tile name -> remaining count from tileset
     tile_name_to_count: HashMap<String, u32>,
 }
@@ -161,7 +163,9 @@ impl WasmGame {
             }
         }
         
-        let game = Game::new(&tileset, GameSettings::default());
+        let mut settings = GameSettings::default();
+        settings.farmers_enabled = false;
+        let game = Game::new(&tileset, settings);
 
         let mut tile_name_to_id: HashMap<String, TileId> = HashMap::new();
         let mut tile_id_to_name: HashMap<TileId, String> = HashMap::new();
@@ -204,6 +208,7 @@ impl WasmGame {
             human_player: PlayerId(0),
             bot_player: PlayerId(1),
             bot_engine: MinimaxEngine::new(bot_depth),
+            greedy_engine: GreedyCompleterEngine::new(),
             tile_name_to_count,
         }
     }
