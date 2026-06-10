@@ -50,7 +50,7 @@ impl Default for GameSettings {
             number_players: 2,
             number_followers: 8, 
             calculate_move_score_field: true,
-            farmers_enabled: true,
+            farmers_enabled: false,
         }
     }
 }

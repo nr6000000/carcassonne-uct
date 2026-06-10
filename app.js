@@ -101,7 +101,7 @@ function setupEventListeners() {
     dom.boardContainer.addEventListener("mousemove", onBoardMouseMove);
     dom.boardContainer.addEventListener("mouseup", onBoardMouseUp);
     dom.boardContainer.addEventListener("mouseleave", onBoardMouseUp);
-    
+
     // Prevent context menu on board
     dom.boardContainer.addEventListener("contextmenu", (e) => e.preventDefault());
 }
