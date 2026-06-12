@@ -4,6 +4,5 @@ pub trait CarcassonneEngine {
     fn play_move(
         &mut self, 
         game: &mut Game,
-        player: PlayerId,
     ) -> Move;
 }

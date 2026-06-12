@@ -26,6 +26,8 @@ pub struct PlayerId(pub(crate) u32);
 #[derive(Clone)]
 pub struct Game {
     pub(crate) move_num: u32,
+    pub(crate) players: Vec<PlayerId>,
+    pub(crate) current_player: usize,
     pub(crate) map: Map<TilePixel>,
     pub(crate) tiles: RapidHashMap<TileId, Tile>,
     pub(crate) tiles_left: MultiHashSet<TileId>,
@@ -106,7 +108,7 @@ pub enum TileError {
     BadTile,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub struct Move {
     pub(crate) move_num: u32,
     pub(crate) place: Place,
@@ -114,6 +116,26 @@ pub struct Move {
     pub(crate) rotation: Rotation,
     pub(crate) follower: Option<Index>,
     pub(crate) player: PlayerId,
+}
+
+impl PartialEq for Move {
+    fn eq(&self, other: &Self) -> bool {
+        self.place == other.place && 
+        self.tile == other.tile && 
+        self.rotation == other.rotation && 
+        self.follower == other.follower && 
+        self.player == other.player
+    }
+}
+
+impl std::hash::Hash for Move {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.place.hash(state);
+        self.tile.hash(state);
+        self.rotation.hash(state);
+        self.follower.hash(state);
+        self.player.hash(state);
+    }
 }
 
 impl Move {
@@ -193,6 +215,8 @@ impl Game {
         let mut game = Game{
             move_num: 0,
             map: Map::new(init_map_size),
+            players: (0..number_players).map(|i| PlayerId(i)).collect(),
+            current_player: 0,
             tiles,
             tiles_left,
             free_places: RapidIndexSet::default(),
@@ -222,12 +246,19 @@ impl Game {
     }
 
     pub fn get_players(&self) -> impl Iterator<Item = PlayerId> {
-        self.followers_left.keys().copied()
+        self.players.iter().copied()
     }
 
     pub fn get_score(&self) -> RapidHashMap<PlayerId, u32> {
         self.score.clone()
     }
+
+    pub fn get_points_sum(&self) -> u32 {
+        self.score.iter()
+            .map(|(_player, score)| score)
+            .sum()
+    }
+
 
     pub fn get_followers(&self) -> RapidHashMap<PlayerId, u32> {
         self.followers_left.clone()
@@ -235,6 +266,18 @@ impl Game {
 
     pub fn get_tiles_left(&self) -> usize {
         self.tiles_left.len()
+    }
+
+    pub fn get_current_player(&self) -> PlayerId {
+        self.players[self.current_player]
+    }
+
+    pub fn get_winners(&self) -> Vec<PlayerId> {
+        self.score.iter()
+            .max_set_by_key(|(_, score)| **score)
+            .into_iter()
+            .map(|(player, _)| *player)
+            .collect()
     }
 
     fn place_occupied(&self, place: &Place) -> bool {
@@ -317,13 +360,18 @@ impl Game {
 
     pub fn get_moves(
         &mut self, 
-        player: PlayerId
     ) -> (Vec<Move>, RapidHashMap<(Place, TileId, Rotation), Vec<Structure>>) {
-        let moves = self.get_moves_placement(player);
+        let moves = self.get_moves_placement(self.get_current_player());
         self.get_moves_structures(moves)
     }
 
-    pub fn get_random_move(&mut self, player: PlayerId) -> Option<Move> {
+    pub fn get_random_move(&mut self) -> Option<Move> {
+        let player = self.get_current_player();
+
+        if self.tiles_left.len() == 0 {
+            return None;
+        }
+
         // Happy path - check random
         let sampled_move = 'sample_move: {
             for _ in 0..10 {
@@ -351,7 +399,7 @@ impl Game {
         };
 
         let sampled_move = sampled_move.or_else(|| {
-            // Unhappy path - chceck all in random order
+            // Unhappy path - check all in random order
             let places = self.free_places.iter()
                 .sample(&mut self.rng, self.free_places.len());
 
@@ -388,6 +436,47 @@ impl Game {
         } else {
             sampled_move
         }
+    }
+
+    pub fn play_random_game(&mut self) {
+        loop {
+            if self.get_tiles_left() == 0 {
+                break;
+            }
+            
+            let chosen_move = self.get_random_move();
+            if let Some(mov) = chosen_move {
+                self.play_move(mov)
+                    .unwrap_or_else(|err| panic!("Bład gry: {}", err));
+            } else {
+                break;
+            }            
+        }   
+
+        self.end_game();
+    }
+
+    pub fn play_random_game_get_moves(&mut self) -> RapidHashSet<Move> {
+        let mut moves = RapidHashSet::default();
+
+        loop {
+            if self.get_tiles_left() == 0 {
+                break;
+            }
+            
+            let chosen_move = self.get_random_move();
+            if let Some(mov) = chosen_move {
+                moves.insert(mov);
+                self.play_move(mov)
+                    .unwrap_or_else(|err| panic!("Bład gry: {}", err));
+            } else {
+                break;
+            }            
+        }   
+
+        self.end_game();
+
+        moves
     }
 
     pub(crate) fn check_tile(
@@ -476,7 +565,7 @@ impl Game {
         self.tiles_left.take(&mov.tile);
         self.copy_tile(&tile, mov.rotation, mov.place);
 
-        self.free_places.remove(&mov.place);
+        self.free_places.swap_remove(&mov.place);
         self.free_places.extend(self.empty_neighbour_places(&mov.place));
 
         if let Some(follower) = mov.follower {
@@ -490,6 +579,8 @@ impl Game {
             self.score_structure(&structure);
         }
 
+        self.current_player = (self.current_player + 1) % self.players.len();
+
         Ok(())
     }
 
@@ -498,7 +589,6 @@ impl Game {
         place: &Place, 
         tile: Tile,
         follower: Option<Index>,
-        player: PlayerId,
     ) -> Result<(), TileError> {
         let (tile_id, rot) = 'find_tile: {
             for (tile_id, tile_ref) in self.tiles.iter() {
@@ -528,7 +618,7 @@ impl Game {
             tile: *tile_id,
             rotation: rot,
             follower: follower.map(|f| f + place_index(place)),
-            player,
+            player: self.get_current_player(),
         };
         self.play_move(mov)?;
         

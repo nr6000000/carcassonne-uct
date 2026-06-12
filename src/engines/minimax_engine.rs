@@ -28,8 +28,7 @@ impl MinimaxEngine {
             return (None, score_self - score_opp);
         }
 
-        let current_player = if is_maximizing { player } else { opponent };
-        let (moves, _) = game.get_moves(current_player);
+        let (moves, _) = game.get_moves();
 
         if moves.is_empty() {
             let mut eval_game = game.clone();
@@ -85,15 +84,15 @@ impl CarcassonneEngine for MinimaxEngine {
     fn play_move(
         &mut self, 
         game: &mut Game,
-        player: PlayerId,
     ) -> Move {
+        let player = game.get_current_player();
         let players: Vec<PlayerId> = game.get_players().collect();
         let opponent = *players.iter().find(|&&p| p != player).unwrap_or(&player);
         
         let (best_move, _) = self.minimax(game, self.depth, true, player, opponent, i32::MIN, i32::MAX);
         
         best_move.unwrap_or_else(|| {
-            let (moves, _) = game.get_moves(player);
+            let (moves, _) = game.get_moves();
             moves[0]
         })
     }

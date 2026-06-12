@@ -43,9 +43,8 @@ fn parse_tile(str: String) -> Result<([[TilePixel; TILE_SIZE]; TILE_SIZE], Optio
 pub fn play_move_pic(
     game: &mut Game, 
     place: &Place,
-    player: &PlayerId,
     tile: String,
 ) {
     let (tile, follower) = parse_tile(tile).unwrap();
-    game.play_custom_move(place, Tile::new(tile), follower, *player).unwrap();
+    game.play_custom_move(place, Tile::new(tile), follower).unwrap();
 }

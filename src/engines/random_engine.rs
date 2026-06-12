@@ -21,8 +21,7 @@ impl CarcassonneEngine for RandomEngine {
     fn play_move(
         &mut self, 
         game: &mut Game,
-        player: PlayerId,
     ) -> Move {
-        game.get_random_move(player).unwrap()
+        game.get_random_move().unwrap()
     }
 }

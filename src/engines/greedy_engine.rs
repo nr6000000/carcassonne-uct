@@ -31,9 +31,8 @@ impl CarcassonneEngine for GreedyBuilderEngine {
     fn play_move(
         &mut self, 
         game: &mut Game,
-        player: PlayerId,
     ) -> Move {
-        let (moves, structures) = game.get_moves(player);
+        let (moves, structures) = game.get_moves();
 
         let chosen_move = moves.iter()
             .max_by_key(|mov| {
@@ -41,6 +40,8 @@ impl CarcassonneEngine for GreedyBuilderEngine {
                     .map(|structure| {
                         let new_follower = mov.follower
                             .is_some_and(|follower| follower == structure.seed);
+
+                        let player = game.get_current_player();
                         get_points(structure, player, new_follower)
                     })
                     .sum::<u32>();
@@ -63,9 +64,8 @@ impl CarcassonneEngine for GreedyCompleterEngine {
     fn play_move(
         &mut self, 
         game: &mut Game,
-        player: PlayerId,
     ) -> Move {
-        let (moves, structures) = game.get_moves(player);
+        let (moves, structures) = game.get_moves();
 
         let chosen_move = moves.iter()
             .max_by_key(|mov| {
@@ -78,6 +78,7 @@ impl CarcassonneEngine for GreedyCompleterEngine {
                             return new_follower as u32;
                         }
 
+                        let player = game.get_current_player();
                         get_points(structure, player, new_follower)
                     })
                     .sum::<u32>();

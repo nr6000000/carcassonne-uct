@@ -35,7 +35,7 @@ fn run() -> Game {
         let current_player = current_player_gen.next().unwrap();
 
         let chosen_move = players.get_mut(current_player).unwrap()
-            .play_move(&mut game, *current_player);
+            .play_move(&mut game);
 
         game.play_move(chosen_move)
             .unwrap_or_else(|err| panic!("Bład gry: {}", err));

@@ -230,7 +230,7 @@ impl WasmGame {
     /// Compute all valid moves for the human player.
     /// Returns available tiles with their valid placements.
     pub fn compute_human_moves(&mut self) -> String {
-        let (moves, structures) = self.game.get_moves(self.human_player);
+        let (moves, structures) = self.game.get_moves();
 
         // Group moves by tile name and (place, rotation)
         let mut tiles: HashMap<String, TileInfo> = HashMap::new();
@@ -416,7 +416,7 @@ impl WasmGame {
 
     /// Bot plays its turn using GreedyEngine
     pub fn bot_play(&mut self) -> String {
-        let (moves, structures) = self.game.get_moves(self.bot_player);
+        let (moves, structures) = self.game.get_moves();
 
         if moves.is_empty() {
             return serde_json::to_string(&BotMoveResponse {
@@ -432,7 +432,7 @@ impl WasmGame {
             .unwrap();
         }
 
-        let chosen_move = self.bot_engine.play_move(&mut self.game, self.bot_player);
+        let chosen_move = self.bot_engine.play_move(&mut self.game);
 
         let tile_name = self.tile_id_to_name
             .get(&chosen_move.tile)
@@ -533,11 +533,11 @@ impl WasmGame {
 
     fn check_game_over(&mut self) -> bool {
         // Check if tiles_left is empty or no valid moves for either player
-        let (human_moves, _) = self.game.get_moves(self.human_player);
+        let (human_moves, _) = self.game.get_moves();
         if !human_moves.is_empty() {
             return false;
         }
-        let (bot_moves, _) = self.game.get_moves(self.bot_player);
+        let (bot_moves, _) = self.game.get_moves();
         bot_moves.is_empty()
     }
 

@@ -16,7 +16,7 @@ fn score_cloister() {
         panic!();
     };
 
-    play_move_pic(&mut game, &Place{x: 0, y: -1}, player1,
+    play_move_pic(&mut game, &Place{x: 0, y: -1},
        "▒▒▒▒▒▒▒▒██\n\
         ▒▒▒▒▒▒▒▒··\n\
         ▒▒▒▒▒▒▒▒░░\n\
@@ -24,7 +24,7 @@ fn score_cloister() {
         ▒▒▒▒▒▒▒▒██\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 1, y: -1}, player2,
+    play_move_pic(&mut game, &Place{x: 1, y: -1},
        "··········\n\
         ··········\n\
         ░░░░✝🯅····\n\
@@ -32,7 +32,7 @@ fn score_cloister() {
         ··········\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 1, y: 0}, player1,
+    play_move_pic(&mut game, &Place{x: 1, y: 0},
        "··········\n\
         ··········\n\
         ░░░░██░░░░\n\
@@ -40,7 +40,7 @@ fn score_cloister() {
         ····░░····\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 2, y: 0}, player2,
+    play_move_pic(&mut game, &Place{x: 2, y: 0},
        "····░░··██\n\
         ····░░··▒▒\n\
         ░░░░░░··▒▒\n\
@@ -48,7 +48,7 @@ fn score_cloister() {
         ██▒▒▒▒▒▒▒▒\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 2, y: -1}, player1,
+    play_move_pic(&mut game, &Place{x: 2, y: -1},
        "··········\n\
         ··········\n\
         ····░░░░░░\n\
@@ -56,7 +56,7 @@ fn score_cloister() {
         ····░░····\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 2, y: -2}, player2,
+    play_move_pic(&mut game, &Place{x: 2, y: -2},
        "██▒▒▒▒▒▒██\n\
         ··········\n\
         ░░░░░░░░░░\n\
@@ -64,7 +64,7 @@ fn score_cloister() {
         ··········\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 1, y: -2}, player1,
+    play_move_pic(&mut game, &Place{x: 1, y: -2},
        "····░░····\n\
         ····░░····\n\
         ░░░░██░░░░\n\
@@ -73,7 +73,7 @@ fn score_cloister() {
     );
 
 
-    play_move_pic(&mut game, &Place{x: 0, y: -2}, player2,
+    play_move_pic(&mut game, &Place{x: 0, y: -2},
        "██··░░····\n\
         ▓▓··░░····\n\
         ▓▓··░░░░░░\n\

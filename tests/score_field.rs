@@ -18,7 +18,7 @@ fn score_field() {
         panic!();
     };
 
-    play_move_pic(&mut game, &Place{x: 0, y: -1}, player1,
+    play_move_pic(&mut game, &Place{x: 0, y: -1},
        "········██\n\
         ········▒▒\n\
         ····🯅···▒▒\n\
@@ -26,7 +26,7 @@ fn score_field() {
         ██▒▒▒▒▒▒██\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: -1, y: -1}, player2,
+    play_move_pic(&mut game, &Place{x: -1, y: -1},
        "····░░····\n\
         ····░░····\n\
         ░░░░░░····\n\
@@ -34,7 +34,7 @@ fn score_field() {
         ··········\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 1, y: -1}, player1,
+    play_move_pic(&mut game, &Place{x: 1, y: -1},
        "██········\n\
         ▒▒········\n\
         ▒▒▒▒······\n\
@@ -42,7 +42,7 @@ fn score_field() {
         ▒▒▒▒▒▒▒▒██\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: -1, y: -2}, player2,
+    play_move_pic(&mut game, &Place{x: -1, y: -2},
        "··········\n\
         ··········\n\
         ░░░░░░····\n\
@@ -50,7 +50,7 @@ fn score_field() {
         ····░░····\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 0, y: -2}, player1,
+    play_move_pic(&mut game, &Place{x: 0, y: -2},
        "········██\n\
         ········▒▒\n\
         ········▒▒\n\
@@ -58,7 +58,7 @@ fn score_field() {
         ········██\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 1, y: -2}, player2,
+    play_move_pic(&mut game, &Place{x: 1, y: -2},
        "██······██\n\
         ▒▒······▒▒\n\
         ▒▒······▒▒\n\
@@ -66,7 +66,7 @@ fn score_field() {
         ██······██\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 2, y: -2}, player1,
+    play_move_pic(&mut game, &Place{x: 2, y: -2},
        "██········\n\
         ▒▒········\n\
         ▒▒········\n\
@@ -74,7 +74,7 @@ fn score_field() {
         ██········\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: -1, y: -3}, player2,
+    play_move_pic(&mut game, &Place{x: -1, y: -3},
        "····░░····\n\
         ····░░····\n\
         ░░░░██░░░░\n\
@@ -82,7 +82,7 @@ fn score_field() {
         ··········\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 0, y: -3}, player1,
+    play_move_pic(&mut game, &Place{x: 0, y: -3},
        "██▒▒▒▒▒▒██\n\
         ··········\n\
         ░░░░░░░░░░\n\
@@ -90,7 +90,7 @@ fn score_field() {
         ··········\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: -2, y: -3}, player2,
+    play_move_pic(&mut game, &Place{x: -2, y: -3},
        "▓▓▓▓▓▓▓▓██\n\
         ▓▓▓▓▓▓▓▓··\n\
         ▓▓▓▓▓▓▓▓░░\n\
@@ -98,7 +98,7 @@ fn score_field() {
         ▓▓▓▓▓▓▓▓██\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: -1, y: -4}, player1,
+    play_move_pic(&mut game, &Place{x: -1, y: -4},
        "····░░··██\n\
         ····░░··▒▒\n\
         ░░░░██··▒▒\n\
@@ -106,7 +106,7 @@ fn score_field() {
         ····░░··██\n".to_owned()
     );
 
-    play_move_pic(&mut game, &Place{x: 0, y: -4}, player1,
+    play_move_pic(&mut game, &Place{x: 0, y: -4},
        "██········\n\
         ▓▓········\n\
         ▓▓▓▓······\n\

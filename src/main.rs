@@ -1,6 +1,6 @@
 use rapidhash::RapidHashMap;
 
-use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::{GreedyCompleterEngine}, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}};
+use crate::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyCompleterEngine, random_engine::RandomEngine, uct_engine::UctEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}};
 
 mod game_logic;
 mod engines;
@@ -11,8 +11,8 @@ fn main() {
     settings.farmers_enabled = false;
     let mut game = Game::new(&tileset, settings);
 
-    let random_engine = RandomEngine::new();
-    let greedy_engine = GreedyCompleterEngine::new();
+    let engine1 = UctEngine::new(10000, 2f32.sqrt(), 300., false);
+    let engine2 = GreedyCompleterEngine::new();
     
     let players_ids = game
         .get_players()
@@ -26,9 +26,12 @@ fn main() {
         player2,
     ].into_iter().cycle();
 
+    println!("{:?} {}", player1, "UCT");
+    println!("{:?} {}", player2, "GreedyCompleter");
+
     let mut players = RapidHashMap::from_iter([
-        (player1, Box::new(random_engine) as Box<dyn CarcassonneEngine>),
-        (player2, Box::new(greedy_engine)),
+        (player1, Box::new(engine1) as Box<dyn CarcassonneEngine>),
+        (player2, Box::new(engine2)),
     ]);
 
     println!("Starting map");
@@ -36,10 +39,9 @@ fn main() {
 
     loop {
         let current_player = current_player_gen.next().unwrap();
-        // println!("Moves: {:#?}", moves);
 
         let chosen_move = players.get_mut(current_player).unwrap()
-            .play_move(&mut game, *current_player);
+            .play_move(&mut game);
 
         println!("Move {}", chosen_move.get_move_num());
         println!("Playing move: {:#?}", chosen_move);

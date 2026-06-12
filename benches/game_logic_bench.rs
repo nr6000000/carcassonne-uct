@@ -3,16 +3,8 @@ use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use carcossonne_uct::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyBuilderEngine, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}};
 
 fn play_game(mut game: Game, mut engine: Box<dyn CarcassonneEngine>) {    
-    let mut current_player_gen = game
-        .get_players()
-        .collect::<Vec<PlayerId>>()
-        .into_iter()
-        .cycle();
-
     loop {
-        let current_player = current_player_gen.next().unwrap();
-
-        let chosen_move = engine.play_move(&mut game, current_player);
+        let chosen_move = engine.play_move(&mut game);
 
         game.play_move(chosen_move)
             .unwrap_or_else(|err| panic!("Bład gry: {}", err));
