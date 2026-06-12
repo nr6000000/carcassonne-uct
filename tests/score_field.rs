@@ -7,7 +7,9 @@ mod common;
 #[test]
 fn score_field() {
     let tileset = STANDARD_TILESET.clone();
-    let mut game = Game::new(&tileset, GameSettings::default());
+    let mut settings = GameSettings::default();
+    settings.farmers_enabled = true;
+    let mut game = Game::new(&tileset, settings);
     
     let players_ids = game
         .get_players()

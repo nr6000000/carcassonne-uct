@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 use heapless::{Vec as ArrayVec};
 use itertools::Itertools;
+use rand::{Rng, RngExt};
 use rand::rngs::ThreadRng;
 use rapidhash::{RapidHashMap, RapidHashSet};
 use strum::{EnumIter, IntoEnumIterator};
@@ -10,7 +11,7 @@ use thiserror::Error;
 use tileset_format::{TILE_SIZE, TileSet};
 use rand::seq::{IndexedRandom, IteratorRandom};
 
-use crate::game_logic::TilePixel;
+use crate::game_logic::{RapidIndexSet, TilePixel};
 use crate::game_logic::datastructures::direction::{Direction, OrdinalDirection};
 use crate::game_logic::datastructures::index::Index;
 use crate::game_logic::datastructures::map::{Map};
@@ -28,7 +29,7 @@ pub struct Game {
     pub(crate) map: Map<TilePixel>,
     pub(crate) tiles: RapidHashMap<TileId, Tile>,
     pub(crate) tiles_left: MultiHashSet<TileId>,
-    pub(crate) free_places: RapidHashSet<Place>,
+    pub(crate) free_places: RapidIndexSet<Place>,
     pub(crate) followers: RapidHashMap<Index, PlayerId>,
     pub(crate) followers_left: RapidHashMap<PlayerId, u32>,
     pub(crate) score: RapidHashMap<PlayerId, u32>,
@@ -61,6 +62,13 @@ pub enum Rotation {
     Rot1 = 1,
     Rot2 = 2,
     Rot3 = 3,
+}
+
+impl Rotation {
+    pub fn iter_with_skip(skip: u32) -> impl Iterator<Item = Rotation> {
+        let skip = (skip % 4) as usize;
+        Rotation::iter().cycle().skip(skip).take(4)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -187,7 +195,7 @@ impl Game {
             map: Map::new(init_map_size),
             tiles,
             tiles_left,
-            free_places: RapidHashSet::default(),
+            free_places: RapidIndexSet::default(),
             followers_left: RapidHashMap::from_iter(
                 (0..number_players).map(|i| (PlayerId(i), number_followers)),
             ),
@@ -316,32 +324,63 @@ impl Game {
     }
 
     pub fn get_random_move(&mut self, player: PlayerId) -> Option<Move> {
-        let places = self.free_places.iter()
-            .sample(&mut self.rng, self.free_places.len());
-
-        let tile_ids = self.tiles_left.iter()
-            .sample(&mut self.rng, self.tiles_left.len());
-
+        // Happy path - check random
         let sampled_move = 'sample_move: {
-            for place in places {
-                for &tile_id in &tile_ids {
-                    let tile = self.tiles[tile_id];
-                    for rotation in Rotation::iter() {
-                        if self.check_tile(&tile, place, &rotation).is_ok() {
-                            break 'sample_move Some(Move {
-                                move_num: self.move_num,
-                                place: *place,
-                                tile: *tile_id,
-                                rotation,
-                                follower: None,
-                                player,
-                            })
-                        }
+            for _ in 0..10 {
+                let place_idx = self.rng.random_range(0..self.free_places.len());
+                let place = self.free_places.get_index(place_idx).unwrap();
+
+                let tile_id = self.tiles_left.get_random(&mut self.rng);
+                let tile = self.tiles[tile_id];
+
+                let random_rot_skip = self.rng.next_u32();
+                for rotation in Rotation::iter_with_skip(random_rot_skip) {
+                    if self.check_tile(&tile, place, &rotation).is_ok() {
+                        break 'sample_move Some(Move {
+                            move_num: self.move_num,
+                            place: *place,
+                            tile: *tile_id,
+                            rotation,
+                            follower: None,
+                            player,
+                        })
                     }
                 }
             }
             None
         };
+
+        let sampled_move = sampled_move.or_else(|| {
+            // Unhappy path - chceck all in random order
+            let places = self.free_places.iter()
+                .sample(&mut self.rng, self.free_places.len());
+
+            let tile_ids = self.tiles_left.iter()
+                .sample(&mut self.rng, self.tiles_left.len());
+
+            'sample_move: {
+                for place in places {
+                    for &tile_id in &tile_ids {
+                        let tile = self.tiles[tile_id];
+                        
+                        let random_rot_skip = self.rng.next_u32();
+                        for rotation in Rotation::iter_with_skip(random_rot_skip) {
+                            if self.check_tile(&tile, place, &rotation).is_ok() {
+                                break 'sample_move Some(Move {
+                                    move_num: self.move_num,
+                                    place: *place,
+                                    tile: *tile_id,
+                                    rotation,
+                                    follower: None,
+                                    player,
+                                })
+                            }
+                        }
+                    }
+                }
+                None
+            }
+        });
 
         if let Some(mov) = sampled_move {
             let (moves, _) = self.get_moves_structures(vec![mov]);

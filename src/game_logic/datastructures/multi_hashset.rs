@@ -3,11 +3,15 @@ use std::fmt::{Debug};
 use std::hash::Hash;
 use core::convert::From;
 
+use rand::RngExt;
+use rand::rngs::ThreadRng;
 use rapidhash::RapidHashMap;
+
+use crate::game_logic::RapidIndexMap;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MultiHashSet<T: Eq + Hash> {
-    elements: RapidHashMap<T, u32>
+    elements: RapidIndexMap<T, u32>
 }
 
 impl<T: Eq + Hash + Copy> Extend<T> for MultiHashSet<T> {
@@ -44,7 +48,7 @@ impl<T: Eq + Hash + Copy, const N: usize> From<[T;N]> for MultiHashSet<T> {
 
 impl<T: Eq + Hash + Copy> MultiHashSet<T> {
     pub fn new() -> MultiHashSet<T> {
-        MultiHashSet { elements: RapidHashMap::default() }
+        MultiHashSet { elements: RapidIndexMap::default() }
     }
 
     pub fn set(&mut self, k: T, v: u32) {
@@ -58,11 +62,11 @@ impl<T: Eq + Hash + Copy> MultiHashSet<T> {
     pub fn take(&mut self, el: &T) {
         self.elements.entry(*el).and_modify(|x| *x = x.saturating_sub(1));
         if let Some(0) = self.elements.get(el) {
-            self.elements.remove(el);
+            self.elements.swap_remove(el);
         }
     }
 
-    pub fn elements(&self) -> Keys<'_, T, u32> {
+    pub fn elements(&self) -> indexmap::map::Keys<'_, T, u32>{
         self.elements.keys()
     }
 
@@ -72,5 +76,10 @@ impl<T: Eq + Hash + Copy> MultiHashSet<T> {
 
     pub fn iter(&self) -> impl Iterator<Item=&T> {
         self.elements.keys()
+    }
+
+    pub fn get_random(&self, rng: &mut ThreadRng) -> &T {
+        let idx = rng.random_range(0..self.elements.len());
+        self.elements.get_index(idx).unwrap().0
     }
 }

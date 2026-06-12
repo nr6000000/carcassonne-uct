@@ -1,6 +1,6 @@
 use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 
-use carcossonne_uct::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyEngine, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}};
+use carcossonne_uct::{engines::{carcassonne_engine::CarcassonneEngine, greedy_engine::GreedyBuilderEngine, random_engine::RandomEngine}, game_logic::{game::{Game, GameSettings, PlayerId}, standard_tileset::STANDARD_TILESET}};
 
 fn play_game(mut game: Game, mut engine: Box<dyn CarcassonneEngine>) {    
     let mut current_player_gen = game
@@ -40,11 +40,11 @@ fn bench(c: &mut Criterion) {
         |b| b.iter(|| play_game(game.clone(), Box::new(RandomEngine::new())))
     );
     group.bench_function(
-        "play_game_greedy", |b| b.iter(|| play_game(game.clone(), Box::new(GreedyEngine::new())))
+        "play_game_greedy", |b| b.iter(|| play_game(game.clone(), Box::new(GreedyBuilderEngine::new())))
     );
     group.bench_function(
         "play_game_greedy_nofields", 
-        |b| b.iter(|| play_game(game_nofields.clone(), Box::new(GreedyEngine::new())))
+        |b| b.iter(|| play_game(game_nofields.clone(), Box::new(GreedyBuilderEngine::new())))
     );
     group.finish();
 }

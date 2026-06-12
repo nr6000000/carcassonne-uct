@@ -78,6 +78,7 @@ dependencies = [
  "criterion",
  "getrandom",
  "heapless 0.9.3",
+ "indexmap",
  "itertools 0.14.0",
  "js-sys",
  "postcard",
