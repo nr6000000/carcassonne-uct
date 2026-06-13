@@ -11,7 +11,7 @@ fn main() {
     settings.farmers_enabled = false;
     let mut game = Game::new(&tileset, settings);
 
-    let engine1 = UctEngine::new(10000, 2f32.sqrt(), 300., false);
+    let engine1 = UctEngine::new(7500, 2f32.sqrt(), 1000., false);
     let engine2 = GreedyCompleterEngine::new();
     
     let players_ids = game

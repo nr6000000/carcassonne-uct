@@ -42,6 +42,7 @@ impl UctNode {
 }
 
 const EMPIRICAL_MAX_SCORE: u32 = 100;
+const BRANCHING_FACTOR: u32 = 55;
 
 fn normalize_score(our_score: u32, opponent_score: u32) -> f32 {
     // let score_diff = our_score as f32 - opponent_score as f32;
@@ -51,14 +52,19 @@ fn normalize_score(our_score: u32, opponent_score: u32) -> f32 {
     // let bias = ((our_score-opponent_score+EMPIRICAL_MAX_SCORE) as f32 / 
     //     (2*EMPIRICAL_MAX_SCORE) as f32) / 4.;
     
-    let eval = match our_score.cmp(&opponent_score) {
-        std::cmp::Ordering::Less => 0.,
-        std::cmp::Ordering::Equal => 0.5,
-        std::cmp::Ordering::Greater => 1.,
-    };
-    eval
+    // let eval = match our_score.cmp(&opponent_score) {
+    //     std::cmp::Ordering::Less => 0.,
+    //     std::cmp::Ordering::Equal => 0.5,
+    //     std::cmp::Ordering::Greater => 1.,
+    // };
+    // eval
 
     // eval.clamp(0., 2.)
+
+    let diff = our_score as f32 - opponent_score as f32;
+    // temperature controls how fast it saturates to 0/1
+    let temperature = 10.; 
+    1. / (1. + (-diff / temperature).exp())
 }
 
 impl UctEngine {
@@ -102,7 +108,7 @@ impl UctEngine {
 
         if self.rave {
             let k = self.k_constant;
-            let beta = (k / (3.*parent_games + k)).sqrt();
+            let beta = (k / (3.*child_games + k)).sqrt();
             let rave_eval = self.nodes[child].rave_eval as f32;
             let rave_games = self.nodes[child].rave_games as f32;
 
@@ -134,8 +140,21 @@ impl UctEngine {
                     }
                 }
             } else {
-                let next_id = current.children.iter()
-                    .max_by_key(|node_id| self.uct(current_id, **node_id).to_bits()).unwrap();
+                // let next_id = current.children.iter()
+                //     .max_by_key(|node_id| self.uct(current_id, **node_id).to_bits()).unwrap();
+
+                // Randomly break ties among unvisited children
+                let unvisited: Vec<_> = current.children.iter()
+                    .filter(|id| self.nodes[**id].games == 0)
+                    .collect();
+
+                let next_id = if !unvisited.is_empty() {
+                    *unvisited.choose(&mut self.rng).unwrap()
+                } else {
+                    current.children.iter()
+                        .max_by_key(|id| self.uct(current_id, **id).to_bits())
+                        .unwrap()
+                };
 
                 game.play_move(self.nodes[*next_id].mov).unwrap();
                 current_id = *next_id;
@@ -182,16 +201,14 @@ impl UctEngine {
             self.nodes[current_id].games += 1;
             self.nodes[current_id].eval += eval;
 
-            let mut to_modify: TinyVec<[usize; 32]> = TinyVec::new();
-            for child_id in self.nodes[current_id].children.iter() {
-                if rave_set.contains(&self.nodes[*child_id].mov) {
-                    to_modify.push(*child_id);
-                }
-            }
+            let children: TinyVec<[usize; BRANCHING_FACTOR as usize]> = self.nodes[current_id]
+                .children.iter().copied().collect();
 
-            for child_id in to_modify.into_iter() {
-                self.nodes[child_id].rave_games += 1;
-                self.nodes[child_id].rave_eval += eval;
+            for child_id in children {
+                if rave_set.contains(&self.nodes[child_id].mov) {
+                    self.nodes[child_id].rave_games += 1;
+                    self.nodes[child_id].rave_eval += eval;
+                }
             }
 
             if current_id == self.root {
@@ -203,6 +220,8 @@ impl UctEngine {
     }
 
     fn get_eval(&self, game: &Game, current_id: usize) -> f32 {
+        assert!(self.root != current_id);
+
         let score = game.get_score();
 
         let current_player = self.nodes[current_id].mov.player;
@@ -233,7 +252,7 @@ impl CarcassonneEngine for UctEngine {
         &mut self, 
         game: &mut Game,
     ) -> Move {
-        self.restart(game);        
+        self.restart(game);
         
         for _i in 0..self.iterations {
             // println!("{}", _i);
