@@ -11,10 +11,10 @@ fn main() {
     settings.farmers_enabled = false;
     let mut game = Game::new(&tileset, settings);
 
-    let engine1 = UctEngine::new_basic(7500);
+    // let engine1 = UctEngine::new_basic(7500);
     // let engine1 = UctEngine::new_basic(5000);
     // let engine1 = UctEngine::new_basic(2500);
-    // let engine1 = UctEngine::new_rave(7500, 500.);
+    let engine1 = UctEngine::new_rave(7500, 500.);
     // let engine1 = UctEngine::new_rave(5000, 300.);
     // let engine1 = UctEngine::new_rave(2500, 200.);
     let engine2 = HeuresticEngine::new();

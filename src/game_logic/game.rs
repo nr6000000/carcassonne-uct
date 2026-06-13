@@ -37,6 +37,7 @@ pub struct Game {
     pub(crate) score: RapidHashMap<PlayerId, u32>,
     pub(crate) settings: GameSettings,
     rng: ThreadRng,
+    last_move: Option<Move>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -229,6 +230,7 @@ impl Game {
             ),
             settings,
             rng: rand::rng(),
+            last_move: None,
         };
 
         let starting_tile = game.tiles[&starting_tile_id.unwrap()];
@@ -278,6 +280,10 @@ impl Game {
             .into_iter()
             .map(|(player, _)| *player)
             .collect()
+    }
+
+    pub fn get_last_move(&self) -> Option<Move> {
+        self.last_move
     }
 
     fn place_occupied(&self, place: &Place) -> bool {
@@ -560,6 +566,7 @@ impl Game {
             return Err(TileError::StaleMove)
         }
         self.move_num += 1;
+        self.last_move = Some(mov);
 
         let tile = self.tiles[&mov.tile];
         self.tiles_left.take(&mov.tile);

@@ -4,8 +4,10 @@ use rapidhash::RapidHashSet;
 use tinyvec::{TinyVec};
 
 use crate::engines::carcassonne_engine::CarcassonneEngine;
+use crate::game_logic::flood_fill::flood_fill;
 use crate::game_logic::game::{Game, Move, Place, PlayerId, Rotation};
 use crate::game_logic::tile::TileId;
+use crate::game_logic::tilepixel_ext::TilePixelExt;
 
 pub struct UctEngine {
     pub iterations: u32,
@@ -17,6 +19,7 @@ pub struct UctEngine {
     rng: ThreadRng,
 }
 
+#[derive(Debug, Clone)]
 struct UctNode {
     mov: Move,
     children: Vec<usize>,
@@ -228,7 +231,7 @@ impl UctEngine {
     }
 
     fn get_eval(&self, game: &Game, current_id: usize) -> f32 {
-        assert!(self.root != current_id);
+        // assert!(self.root != current_id);
 
         let score = game.get_score();
 
@@ -260,7 +263,51 @@ impl CarcassonneEngine for UctEngine {
         &mut self, 
         game: &mut Game,
     ) -> Move {
-        self.restart(game);
+        if self.nodes.is_empty() {
+            self.restart(game);
+        }
+
+        // Searching for opponent move in our tree
+        // Kinda complicated because moves can vary in follower placement
+        if self.nodes[self.root].mov.move_num != game.move_num {
+            let opponent_move = game.get_last_move().unwrap();
+            // println!("{:#?}", opponent_move);
+            // println!("{:#?}", self.nodes[self.root].children.iter()
+            //     .map(|node_id| self.nodes[*node_id].mov)
+            //     .filter(|mov| mov.place == opponent_move.place &&
+            //         mov.tile == opponent_move.tile &&
+            //         mov.rotation == opponent_move.rotation)
+            //     .collect::<Vec<Move>>());
+            let new_root = self.nodes[self.root].children.iter()
+                .find(|node_id| {
+                    self.nodes[**node_id].mov.place == opponent_move.place &&
+                    self.nodes[**node_id].mov.tile == opponent_move.tile &&
+                    self.nodes[**node_id].mov.rotation == opponent_move.rotation &&
+                    self.nodes[**node_id].mov.player == opponent_move.player && {
+                        let follower = self.nodes[**node_id].mov.follower;
+                        let opponent_follower = opponent_move.follower;
+
+                        match(follower, opponent_follower) {
+                            (Some(seed), Some(opponent_follower_idx)) => {
+                                let seed_pixel = game.map[seed];
+                                let tiles = flood_fill(
+                                    seed, 
+                                    |idx| {
+                                        let current = game.map[idx];
+                                        current.connects(&seed_pixel)
+                                    }
+                                );
+
+                                tiles.contains(&opponent_follower_idx)
+                            },
+                            (None, None) => true,
+                            _ => false,
+                        }
+                    }
+                })
+                .unwrap();
+            self.root = *new_root;
+        }
         
         for _i in 0..self.iterations {
             // println!("{}", _i);
@@ -281,7 +328,8 @@ impl CarcassonneEngine for UctEngine {
                 let node = &self.nodes[**node_id];
                 node.games
             }).unwrap();
-        
+
+        self.root = chosen_node;
         self.nodes[chosen_node].mov
     }
 }
