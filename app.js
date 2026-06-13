@@ -2,7 +2,7 @@
 // Bridges JavaScript UI with Rust/WASM game engine
 // ─────────────────────────────────────────────────────────────────────────────
 
-import init, { WasmGame } from "./pkg/carcossonne_uct.js";
+import init, { WasmGame, init_panic_hook } from "./pkg/carcossonne_uct.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -32,6 +32,8 @@ let gameState = {
     placedTiles: [],       // visual record of all placed tiles
 };
 
+let playerName = null;
+
 // Board panning state
 let camera = {
     x: 0,
@@ -52,7 +54,7 @@ function cacheDom() {
     dom.mainMenu = document.getElementById("main-menu");
     dom.gameScreen = document.getElementById("game-screen");
     dom.btnPlayBot = document.getElementById("btn-play-bot");
-    dom.botDepthSelect = document.getElementById("bot-depth");
+    dom.botTypeSelect = document.getElementById("bot-type");
     dom.plainModeCheckbox = document.getElementById("plain-mode");
     dom.boardContainer = document.getElementById("board-container");
     dom.boardWrapper = document.getElementById("board-wrapper");
@@ -78,6 +80,7 @@ function cacheDom() {
     dom.btnPlayAgain = document.getElementById("btn-play-again");
     dom.scoreHuman = document.getElementById("score-human");
     dom.scoreBot = document.getElementById("score-bot");
+    dom.playerName = document.getElementById("player-name");
 }
 
 // ─── Initialization ──────────────────────────────────────────────────────────
@@ -85,6 +88,7 @@ function cacheDom() {
 async function main() {
     cacheDom();
     await init();
+    init_panic_hook();
     dom.loadingOverlay.classList.add("hidden");
     setupEventListeners();
 }
@@ -111,9 +115,15 @@ function setupEventListeners() {
 // ─── Game Lifecycle ──────────────────────────────────────────────────────────
 
 function startGame() {
+    if(!dom.playerName.value) {
+        alert("Choose a pseudonym");
+        return;
+    }
+    playerName = dom.playerName.value;
+
     const plainMode = dom.plainModeCheckbox ? dom.plainModeCheckbox.checked : false;
-    const botDepth = dom.botDepthSelect ? parseInt(dom.botDepthSelect.value, 10) : 1;
-    wasmGame = new WasmGame(plainMode, botDepth);
+    // const botDepth = dom.botDepthSelect ? parseInt(dom.botDepthSelect.value, 10) : 1;
+    wasmGame = new WasmGame(plainMode, dom.botTypeSelect.value);
     gameState = {
         selectedTile: null,
         rotation: 0,
@@ -232,6 +242,32 @@ function startBotTurn() {
         // Back to human turn
         setTimeout(() => startHumanTurn(), 500);
     }, BOT_DELAY_MS);
+}
+
+function sendDB() {
+    const matchData = {
+        player_name: "Alice",
+        player_score: 10,
+        opponent_score: 5
+    };
+
+    // Send the data via a POST request
+    fetch('save_game.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(matchData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Match saved successfully!', data);
+        } else {
+            console.error('Error saving match:', data.error);
+        }
+    })
+    .catch(error => console.error('Network error:', error));
 }
 
 function endGame() {

@@ -20,14 +20,17 @@
       
       <div class="menu-settings">
         <div class="setting-group">
-          <label for="bot-depth" class="setting-label">Bot Search Depth</label>
+          <label for="player-name" class="setting-label">Pseudonym</label>
+          <input id="player-name" type="text" class="setting-select">
+        </div>
+        <div class="setting-group">
+          <label for="bot-type" class="setting-label">Bot Type</label>
           <div class="select-wrapper">
-            <select id="bot-depth" class="setting-select">
-              <option value="1" selected>1 (Fastest)</option>
-              <option value="2">2 (Fast)</option>
-              <option value="3">3 (Medium)</option>
-              <option value="4">4 (Slow)</option>
-              <option value="5">5 (Slowest)</option>
+            <select id="bot-type" class="setting-select">
+              <option value="BasicUCT(7500)" selected>UCT</option>
+              <option value="RaveUCT(7500, 500)">UCT RAVE</option>
+              <option value="EcoUCT(7500, 500)">ECO UCT</option>
+              <option value="Heurestic">HEURESTIC</option>
             </select>
           </div>
         </div>

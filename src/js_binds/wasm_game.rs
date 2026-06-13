@@ -5,8 +5,10 @@ use wasm_bindgen::prelude::*;
 use tileset_format::TILE_SIZE;
 
 use crate::engines::carcassonne_engine::CarcassonneEngine;
+use crate::engines::heurestic_engine::HeuresticEngine;
 use crate::engines::minimax_engine::MinimaxEngine;
 use crate::engines::greedy_engine::GreedyCompleterEngine;
+use crate::engines::uct_engine::UctEngine;
 use crate::game_logic::game::{
     Game, GameSettings, Move, Place, PlayerId, Rotation, place_index
 };
@@ -15,6 +17,7 @@ use crate::game_logic::tile::TileId;
 use crate::game_logic::tilepixel_ext::TilePixelExt;
 use crate::game_logic::Index;
 use crate::game_logic::TilePixel;
+use crate::js_binds::log::log;
 
 // ─── Serializable DTOs ───────────────────────────────────────────────────────
 
@@ -135,16 +138,21 @@ pub struct WasmGame {
     cached_structures: rapidhash::RapidHashMap<(Place, TileId, Rotation), Vec<crate::game_logic::structures::Structure>>,
     human_player: PlayerId,
     bot_player: PlayerId,
-    bot_engine: MinimaxEngine,
-    greedy_engine: GreedyCompleterEngine,
+    bot_engine: Box<dyn CarcassonneEngine>,
+    // greedy_engine: GreedyCompleterEngine,
     // Track tile name -> remaining count from tileset
     tile_name_to_count: HashMap<String, u32>,
 }
 
 #[wasm_bindgen]
+pub fn init_panic_hook() {
+    console_error_panic_hook::set_once();
+}
+
+#[wasm_bindgen]
 impl WasmGame {
     #[wasm_bindgen(constructor)]
-    pub fn new(plain_mode: bool, bot_depth: u32) -> WasmGame {
+    pub fn new(plain_mode: bool, engine_name: &str) -> WasmGame {
         let mut tileset = STANDARD_TILESET.clone();
         
         if plain_mode {
@@ -198,6 +206,14 @@ impl WasmGame {
             meeples: vec![],
         };
 
+        let engine: Box<dyn CarcassonneEngine> = match engine_name {
+            "BasicUCT(7500)" => Box::new(UctEngine::new_basic(7500)),
+            "RaveUCT(7500, 500)" => Box::new(UctEngine::new_rave(7500, 500.)),
+            "EcoUCT(7500, 500)" => Box::new(UctEngine::new_eco(10000, 20)),
+            "Heurestic" => Box::new(HeuresticEngine::new()),
+            _ => panic!(),
+        };
+
         WasmGame {
             game,
             tile_name_to_id,
@@ -207,15 +223,15 @@ impl WasmGame {
             cached_structures: rapidhash::RapidHashMap::default(),
             human_player: PlayerId(0),
             bot_player: PlayerId(1),
-            bot_engine: MinimaxEngine::new(bot_depth),
-            greedy_engine: GreedyCompleterEngine::new(),
+            bot_engine: engine,
+            // greedy_engine: GreedyCompleterEngine::new(),
             tile_name_to_count,
         }
     }
 
-    pub fn set_bot_depth(&mut self, depth: u32) {
-        self.bot_engine.depth = depth;
-    }
+    // pub fn set_bot_depth(&mut self, depth: u32) {
+    //     self.bot_engine.depth = depth;
+    // }
 
     /// Returns starting info as JSON
     pub fn get_starting_info(&self) -> String {

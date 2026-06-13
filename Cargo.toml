@@ -22,6 +22,7 @@ wasm-bindgen = "0.2.122"
 js-sys = "0.3.99"
 rapidhash = "4.4.1"
 indexmap = "2.14.0"
+console_error_panic_hook = "0.1.7"
 
 [build-dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
