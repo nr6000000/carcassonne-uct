@@ -107,7 +107,7 @@ impl UctEngine {
         self.nodes = Vec::new();
 
         let dummy_move = Move {
-            move_num: 0,
+            move_num: game.move_num,
             place: Place{x: 0, y: 0},
             tile: TileId(0),
             rotation: Rotation::Rot0,
