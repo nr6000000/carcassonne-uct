@@ -80,6 +80,14 @@ impl UctEngine {
         }
     }
 
+    pub fn new_basic(iterations: u32) -> UctEngine {
+        Self::new(iterations, 2f32.sqrt(), 0., false)
+    }
+
+    pub fn new_rave(iterations: u32, k_constant: f32) -> UctEngine {
+        Self::new(iterations, 2f32.sqrt(), k_constant, true)
+    }
+
     fn restart(&mut self, game: &mut Game) {
         self.nodes = Vec::new();
 
@@ -207,7 +215,7 @@ impl UctEngine {
             for child_id in children {
                 if rave_set.contains(&self.nodes[child_id].mov) {
                     self.nodes[child_id].rave_games += 1;
-                    self.nodes[child_id].rave_eval += eval;
+                    self.nodes[child_id].rave_eval += 1. - eval;
                 }
             }
 
