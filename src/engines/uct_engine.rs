@@ -14,6 +14,7 @@ pub struct UctEngine {
     pub c_constant: f32,
     pub k_constant: f32,
     pub rave: bool,
+    pub max_depth: u32,
     nodes: Vec<UctNode>,
     root: usize,
     rng: ThreadRng,
@@ -71,7 +72,13 @@ fn normalize_score(our_score: u32, opponent_score: u32) -> f32 {
 }
 
 impl UctEngine {
-    pub fn new(iterations: u32, c_constant: f32, k_constant: f32, rave: bool) -> Self {
+    pub fn new(
+        iterations: u32, 
+        c_constant: f32, 
+        k_constant: f32, 
+        rave: bool,
+        max_depth: u32,
+    ) -> Self {
         Self { 
             iterations,
             c_constant,
@@ -80,15 +87,20 @@ impl UctEngine {
             root: 0,
             rng: rand::rng(),
             rave,
+            max_depth,
         }
     }
 
     pub fn new_basic(iterations: u32) -> UctEngine {
-        Self::new(iterations, 2f32.sqrt(), 0., false)
+        Self::new(iterations, 2f32.sqrt(), 0., false, u32::MAX)
     }
 
     pub fn new_rave(iterations: u32, k_constant: f32) -> UctEngine {
-        Self::new(iterations, 2f32.sqrt(), k_constant, true)
+        Self::new(iterations, 2f32.sqrt(), k_constant, true, u32::MAX)
+    }
+
+    pub fn new_eco(iterations: u32, depth: u32) -> UctEngine {
+        Self::new(iterations, 2f32.sqrt(), 0., false, depth)
     }
 
     fn restart(&mut self, game: &mut Game) {
@@ -251,7 +263,12 @@ impl UctEngine {
             let eval = self.get_eval(&game, current_id);
             self.backpropagate_rave(current_id, eval, moves);
         } else {
-            game.play_random_game();
+            let max_move_num = if self.max_depth == u32::MAX {
+                u32::MAX
+            } else {
+                game.move_num + self.max_depth
+            };
+            game.play_random_game(max_move_num);
             let eval = self.get_eval(&game, current_id);
             self.backpropagate(current_id, eval);
         }

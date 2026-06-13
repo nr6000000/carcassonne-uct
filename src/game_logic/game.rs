@@ -11,7 +11,7 @@ use thiserror::Error;
 use tileset_format::{TILE_SIZE, TileSet};
 use rand::seq::{IndexedRandom, IteratorRandom};
 
-use crate::game_logic::{RapidIndexSet, TilePixel};
+use crate::game_logic::{RapidIndexSet, TilePixel, game};
 use crate::game_logic::datastructures::direction::{Direction, OrdinalDirection};
 use crate::game_logic::datastructures::index::Index;
 use crate::game_logic::datastructures::map::{Map};
@@ -444,9 +444,9 @@ impl Game {
         }
     }
 
-    pub fn play_random_game(&mut self) {
+    pub fn play_random_game(&mut self, max_move_num: u32) {
         loop {
-            if self.get_tiles_left() == 0 {
+            if self.get_tiles_left() == 0 || self.move_num > max_move_num {
                 break;
             }
             
@@ -459,7 +459,9 @@ impl Game {
             }            
         }   
 
-        self.end_game();
+        if self.get_tiles_left() == 0 {
+            self.end_game();
+        }
     }
 
     pub fn play_random_game_get_moves(&mut self) -> RapidHashSet<Move> {
