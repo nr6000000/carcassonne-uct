@@ -71,6 +71,17 @@ fn normalize_score(our_score: u32, opponent_score: u32) -> f32 {
     1. / (1. + (-diff / temperature).exp())
 }
 
+enum ExpandResult {
+    Ok,
+    GameOver,
+    TreeCapacity,
+}
+
+enum SelectResult {
+    Ok(usize),
+    TreeCapacity,
+}
+
 impl UctEngine {
     pub fn new(
         iterations: u32, 
@@ -147,7 +158,7 @@ impl UctEngine {
         }
     }
 
-    fn select(&mut self, game: &mut Game) -> usize {
+    fn select(&mut self, game: &mut Game) -> SelectResult {
         let mut current_id = self.root;
 
         loop {
@@ -158,8 +169,10 @@ impl UctEngine {
                     // Leaf node
                     break;
                 } else {
-                    if !self.expand(current_id, game) {
-                        break;
+                    match self.expand(current_id, game) {
+                        ExpandResult::Ok => (),
+                        ExpandResult::GameOver => break,
+                        ExpandResult::TreeCapacity => return SelectResult::TreeCapacity,
                     }
                 }
             } else {
@@ -184,13 +197,17 @@ impl UctEngine {
             }
         }
 
-        current_id
+        SelectResult::Ok(current_id)
     }
 
-    fn expand(&mut self, node_id: usize, game: &mut Game) -> bool {
+    fn expand(&mut self, node_id: usize, game: &mut Game) -> ExpandResult {
         let (moves, _) = game.get_moves();
         if moves.len() == 0 {
-            return false;
+            return ExpandResult::GameOver;
+        }
+
+        if self.nodes.try_reserve(moves.len()).is_err() {
+            return ExpandResult::TreeCapacity;
         }
 
         moves.iter()
@@ -201,7 +218,7 @@ impl UctEngine {
                 self.nodes[node_id].children.push(child_id);
             });
         
-        true
+        ExpandResult::Ok
     }
 
     fn backpropagate(&mut self, start: usize, mut eval: f32) {
@@ -256,21 +273,25 @@ impl UctEngine {
         normalize_score(score[&current_player], score[&other_player])
     }
 
-    fn play_once(&mut self, mut game: Game) {
-        let current_id = self.select(&mut game);
-        if self.rave {
-            let moves = game.play_random_game_get_moves();
-            let eval = self.get_eval(&game, current_id);
-            self.backpropagate_rave(current_id, eval, moves);
-        } else {
-            let max_move_num = if self.max_depth == u32::MAX {
-                u32::MAX
+    fn play_once(&mut self, mut game: Game) -> bool {
+        if let SelectResult::Ok(current_id) = self.select(&mut game) {
+            if self.rave {
+                let moves = game.play_random_game_get_moves();
+                let eval = self.get_eval(&game, current_id);
+                self.backpropagate_rave(current_id, eval, moves);
             } else {
-                game.move_num + self.max_depth
-            };
-            game.play_random_game(max_move_num);
-            let eval = self.get_eval(&game, current_id);
-            self.backpropagate(current_id, eval);
+                let max_move_num = if self.max_depth == u32::MAX {
+                    u32::MAX
+                } else {
+                    game.move_num + self.max_depth
+                };
+                game.play_random_game(max_move_num);
+                let eval = self.get_eval(&game, current_id);
+                self.backpropagate(current_id, eval);
+            }
+            true
+        } else {
+            false
         }
     }
 }
@@ -280,11 +301,59 @@ impl CarcassonneEngine for UctEngine {
         &mut self, 
         game: &mut Game,
     ) -> Move {
-        self.restart(game);
-        
+        if self.nodes.is_empty() {
+            self.restart(game);
+        }
+
+        // Searching for opponent move in our tree
+        // Kinda complicated because moves can vary in follower placement
+        if self.nodes[self.root].mov.move_num != game.move_num {
+            let opponent_move = game.get_last_move().unwrap();
+            // println!("{:#?}", opponent_move);
+            // println!("{:#?}", self.nodes[self.root].children.iter()
+            //     .map(|node_id| self.nodes[*node_id].mov)
+            //     .filter(|mov| mov.place == opponent_move.place &&
+            //         mov.tile == opponent_move.tile &&
+            //         mov.rotation == opponent_move.rotation)
+            //     .collect::<Vec<Move>>());
+            let new_root = self.nodes[self.root].children.iter()
+                .find(|node_id| {
+                    self.nodes[**node_id].mov.place == opponent_move.place &&
+                    self.nodes[**node_id].mov.tile == opponent_move.tile &&
+                    self.nodes[**node_id].mov.rotation == opponent_move.rotation &&
+                    self.nodes[**node_id].mov.player == opponent_move.player && {
+                        let follower = self.nodes[**node_id].mov.follower;
+                        let opponent_follower = opponent_move.follower;
+
+                        match(follower, opponent_follower) {
+                            (Some(seed), Some(opponent_follower_idx)) => {
+                                let seed_pixel = game.map[seed];
+                                let tiles = flood_fill(
+                                    seed, 
+                                    |idx| {
+                                        let current = game.map[idx];
+                                        current.connects(&seed_pixel)
+                                    }
+                                );
+
+                                tiles.contains(&opponent_follower_idx)
+                            },
+                            (None, None) => true,
+                            _ => false,
+                        }
+                    }
+                })
+                .unwrap();
+            self.root = *new_root;
+        }
+
+        let mut tree_restart = false;
         for _i in 0..self.iterations {
             // println!("{}", _i);
-            self.play_once(game.clone());
+            if !self.play_once(game.clone()) {
+                tree_restart = true;
+                break;
+            }
         }
 
         let eval = self.nodes[self.root].eval;
@@ -301,7 +370,14 @@ impl CarcassonneEngine for UctEngine {
                 let node = &self.nodes[**node_id];
                 node.games
             }).unwrap();
+        
+        self.root = chosen_node;
+        let chosen_mov = self.nodes[chosen_node].mov;
 
-        self.nodes[chosen_node].mov
+        if tree_restart {
+            self.nodes.clear();
+        }
+
+        chosen_mov
     }
 }
