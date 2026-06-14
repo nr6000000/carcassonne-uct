@@ -33,6 +33,7 @@ let gameState = {
 };
 
 let playerName = null;
+let engineName = null;
 
 // Board panning state
 let camera = {
@@ -120,10 +121,11 @@ function startGame() {
         return;
     }
     playerName = dom.playerName.value;
+    engineName = dom.botTypeSelect.value;
 
     const plainMode = dom.plainModeCheckbox ? dom.plainModeCheckbox.checked : false;
     // const botDepth = dom.botDepthSelect ? parseInt(dom.botDepthSelect.value, 10) : 1;
-    wasmGame = new WasmGame(plainMode, dom.botTypeSelect.value);
+    wasmGame = new WasmGame(plainMode, engineName);
     gameState = {
         selectedTile: null,
         rotation: 0,
@@ -244,12 +246,13 @@ function startBotTurn() {
     }, BOT_DELAY_MS);
 }
 
-function sendDB() {
-    const matchData = {
-        player_name: "Alice",
-        player_score: 10,
-        opponent_score: 5
-    };
+function sendDB(data) {
+    // const data = {
+    //     player_name: "Alice",
+    //     engine_name: "Heurestic",
+    //     player_score: 10,
+    //     opponent_score: 5
+    // };
 
     // Send the data via a POST request
     fetch('save_game.php', {
@@ -257,7 +260,7 @@ function sendDB() {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(matchData)
+        body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(data => {
@@ -274,6 +277,13 @@ function endGame() {
     gameState.phase = "gameover";
     const resultJson = wasmGame.end_game();
     const result = JSON.parse(resultJson);
+
+    sendDB({
+        player_name: playerName,
+        engine_name: engineName,
+        player_score: result.scores.human,
+        opponent_score: result.scores.bot,
+    })
 
     updateScores(result.scores);
 
