@@ -115,7 +115,7 @@ impl UctEngine {
     }
 
     fn restart(&mut self, game: &mut Game) {
-        self.nodes = Vec::new();
+        self.nodes.clear();
 
         let dummy_move = Move {
             move_num: game.move_num,
@@ -127,6 +127,7 @@ impl UctEngine {
         };
         let root = UctNode::create(dummy_move, 0);
         self.nodes.push(root);
+        self.root = 0;
         self.expand(self.nodes.len()-1, game);
     }
 
