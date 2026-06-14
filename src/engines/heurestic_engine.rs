@@ -16,7 +16,7 @@ fn get_points(structure: &Structure, player: PlayerId, new_follower: bool) -> u3
         .unwrap_or(0)
 }
 
-fn heurestic(game: &Game, structure: &Structure, new_follower: bool) -> u32 {
+fn heurestic(game: &Game, structure: &Structure, new_follower: bool) -> i32 {
     let in_game_points = |points: u32| -> u32 {
         if !structure.completed && (
             game.map[structure.seed] == TilePixel::City ||
@@ -31,10 +31,10 @@ fn heurestic(game: &Game, structure: &Structure, new_follower: bool) -> u32 {
     let player = game.get_current_player();
     let opponent = game.get_players().find(|p| *p != player).unwrap();
 
-    let player_points = in_game_points(get_points(structure, player, new_follower));
-    let opponent_points = in_game_points(get_points(structure, opponent, false));
-    
-    player_points-opponent_points
+    let player_points = in_game_points(get_points(structure, player, new_follower)) as i32;
+    let opponent_points = in_game_points(get_points(structure, opponent, false)) as i32;
+
+    player_points - opponent_points
 }
 
 pub struct HeuresticEngine {}
@@ -60,7 +60,7 @@ impl CarcassonneEngine for HeuresticEngine {
                             .is_some_and(|follower| follower == structure.seed);
                         heurestic(game, structure, new_follower)
                     })
-                    .sum::<u32>();
+                    .sum::<i32>();
                 points
             } 
             ).unwrap();

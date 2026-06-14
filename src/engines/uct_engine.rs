@@ -105,9 +105,10 @@ impl UctEngine {
 
     fn restart(&mut self, game: &mut Game) {
         self.nodes = Vec::new();
+        self.root = 0;
 
         let dummy_move = Move {
-            move_num: 0,
+            move_num: game.move_num,
             place: Place{x: 0, y: 0},
             tile: TileId(0),
             rotation: Rotation::Rot0,
@@ -308,7 +309,7 @@ impl CarcassonneEngine for UctEngine {
                             (Some(seed), Some(opponent_follower_idx)) => {
                                 let seed_pixel = game.map[seed];
                                 let tiles = flood_fill(
-                                    seed, 
+                                    seed,
                                     |idx| {
                                         let current = game.map[idx];
                                         current.connects(&seed_pixel)
@@ -321,24 +322,20 @@ impl CarcassonneEngine for UctEngine {
                             _ => false,
                         }
                     }
-                })
-                .unwrap();
-            self.root = *new_root;
+                });
+
+            match new_root {
+                Some(node_id) => self.root = *node_id,
+                // Ruch przeciwnika nie jest w drzewie (za malo iteracji by rozwinac
+                // dzieci) — restart drzewa od biezacej pozycji.
+                None => self.restart(game),
+            }
         }
         
         for _i in 0..self.iterations {
             // println!("{}", _i);
             self.play_once(game.clone());
         }
-
-        let eval = self.nodes[self.root].eval;
-        let games = self.nodes[self.root].games;
-        println!(
-            "Engine eval: {}/{} - {:.2}%", 
-            games as f32 - eval,
-            games,
-            (1. - (eval/games as f32)) * 100.,
-        );
 
         let chosen_node = *self.nodes[self.root].children.iter()
             .max_by_key(|node_id| {
